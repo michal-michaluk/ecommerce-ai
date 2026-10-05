@@ -1,0 +1,612 @@
+1
+00:00:01,910 --> 00:00:13,670
+So let's make a summary of product catalog management.
+
+2
+00:00:13,670 --> 00:00:25,830
+Definition of product or definition of new version of product description is starting with content manager personnel.
+
+3
+00:00:25,830 --> 00:00:32,550
+They have an intent to create new product or create new version of product.
+
+4
+00:00:32,550 --> 00:00:36,550
+Let's start with creation of new product.
+
+5
+00:00:36,550 --> 00:00:56,310
+So they need to fill some basic information on the very beginning, like the product title and some IDs, so they can refer later in the process to that particular product definition.
+
+6
+00:00:56,310 --> 00:01:06,310
+But the initial title can be changed at any moment later, so it is not very important at that stage, but it is already titled.
+
+7
+00:01:06,310 --> 00:01:21,910
+And just after that action we have almost blank draft of the product description, and we can immediately add those descriptions titles and other information.
+
+8
+00:01:21,910 --> 00:01:29,510
+So that's done as well by the content manager, of course.
+
+9
+00:01:29,510 --> 00:01:59,670
+Now in any new creation or edit the general event which happens after it, general consequence of it is basically update of the product description, but what is very important that update is not visible outside of the catalog management tool or catalog management domain.
+
+10
+00:01:59,670 --> 00:02:09,590
+So those changes of product descriptions, they are purely private until they will be published.
+
+11
+00:02:09,590 --> 00:02:12,870
+So that's that's very important mechanism.
+
+12
+00:02:12,870 --> 00:02:16,150
+So let's go back to the content manager.
+
+13
+00:02:16,150 --> 00:02:23,110
+He created the blank description, he edited some fields, some information about the product.
+
+14
+00:02:23,110 --> 00:02:36,470
+Basically, he works on the marketing materials around that product, so it looks nice and tempting for customers.
+
+15
+00:02:36,470 --> 00:02:43,350
+In meantime, we have dedicated personnel for adding photos.
+
+16
+00:02:43,350 --> 00:02:52,790
+So they make custom photos of the product, they may get the photos from the vendor of the product.
+
+17
+00:02:52,790 --> 00:03:14,950
+They may process it with AI or whatever, but basically responsibility is to add here a high quality photo which will be included into the product description, and basically after that, we have already those photos in the system, but still they are not published yet.
+
+18
+00:03:14,950 --> 00:03:39,030
+And that process may take some time, they can iterate on that stage, and on some in some moment of time, a content manager basically decides that the description is good enough and it is done and finished, and he is willing to push it to the catalog.
+
+19
+00:03:39,030 --> 00:03:44,470
+But first he needs to request a review.
+
+20
+00:03:44,470 --> 00:03:58,790
+So we have basically pending review in the system, and some other content manager can get notification about it and basically see it on the screen.
+
+21
+00:03:58,790 --> 00:03:59,880
+So here in that place.
+
+22
+00:04:00,150 --> 00:04:23,750
+We should have as well some read modeling reviews, and of course each and each time we have some draft description of the product.
+
+23
+00:04:23,750 --> 00:04:26,550
+Okay.
+
+24
+00:04:26,550 --> 00:04:39,350
+So they have basically that description can request a review, and then we see that pending review in the system.
+
+25
+00:04:39,350 --> 00:04:50,310
+Okay, and then other person responsible for the content management need to review it, validate it.
+
+26
+00:04:50,310 --> 00:05:00,310
+We of course want to make it as easy as possible, so we would like to have a lot of validations here as well.
+
+27
+00:05:00,310 --> 00:05:06,710
+ all the mandatory fields are filled.
+
+28
+00:05:06,710 --> 00:05:18,470
+We could even use some model, maybe AI, maybe something else to validate the grammar or the correctness of the description, etc.
+
+29
+00:05:18,470 --> 00:05:25,590
+So we would like to help as much as possible to streamline that process.
+
+30
+00:05:25,590 --> 00:06:03,430
+ the goal of that process in that area is basically to streamline the creation or basically help those people, and and second even more important goal is basically to have ensure high quality descriptions.
+
+31
+00:06:03,430 --> 00:06:13,750
+So those are two key goals we have when we invest in that piece of software.
+
+32
+00:06:13,750 --> 00:06:41,030
+So after all the checks, we can of course represent those checks as well as key decision, which basically is ensure all the time.
+
+33
+00:06:41,030 --> 00:07:26,230
+ you can imagine that even from the very beginning when you create a blank description, you see immediately feedback what is missing, what are the next informations you need to improve, and on the review that's basically quality gate that you shouldn't push to review if something is missing, but maybe user can overwrite it and push the review even if if something is missing, but for sure we want to ensure that quality gate do not publish to the offer if there is any issue with that description.
+
+34
+00:07:26,230 --> 00:07:49,030
+So when second content manager basically decides that everything is fine and there is no issues provided by the policy, then the fact happens that we have new version of the product published to the offer.
+
+35
+00:07:49,030 --> 00:07:59,880
+There is one important scenario here that given offer may have.
+
+36
+00:08:00,070 --> 00:08:03,510
+Start of availability date, basically.
+
+37
+00:08:03,510 --> 00:08:10,230
+So even if he accepted and published, so maybe it is not published yet.
+
+38
+00:08:10,230 --> 00:08:15,750
+So if he accept the description, it doesn't mean that it is published immediately.
+
+39
+00:08:15,750 --> 00:08:31,590
+So it can be that we have nice definition of the new I don't know iPhone model, but the offer will be published at first of I don't know, July or whatever.
+
+40
+00:08:31,590 --> 00:08:36,550
+So that's another important case we want to cover.
+
+41
+00:08:36,550 --> 00:08:43,190
+In addition, in the catalog, product catalog, we need prices.
+
+42
+00:08:43,190 --> 00:08:47,270
+And another department is responsible for that.
+
+43
+00:08:47,270 --> 00:09:02,870
+So there are people from sales, which basically sets the pricing policy, they can set some price or some discounts in given price ranges, sorry, in given dated ranges.
+
+44
+00:09:02,870 --> 00:09:11,030
+ those prices can be scheduled or projected for the future.
+
+45
+00:09:11,030 --> 00:09:23,990
+And basically when the price change, then there is basically event emitted for the outside world that we have new prices.
+
+46
+00:09:23,990 --> 00:09:34,070
+And the same thing if they scheduled price change, it doesn't mean that it is immediately emitted that we have new prices.
+
+47
+00:09:34,070 --> 00:09:41,910
+We may wait one or few days to basically make those changes, make those prices active or published.
+
+48
+00:09:41,910 --> 00:10:31,350
+So that's similar mechanism for both descriptions and the prices.
+
+49
+00:10:31,350 --> 00:10:39,510
+So if someone looks for the past model of the iPhone, he will find it in our offer, but basically it is not available.
+
+50
+00:10:39,510 --> 00:10:44,950
+So that's that's the important thing.
+
+51
+00:10:44,950 --> 00:10:58,230
+Okay, and all those changes from the management of the catalog goes into read models, we provide to our customers.
+
+52
+00:10:58,230 --> 00:11:29,270
+ in that area, customer of our system, not which channel he he's using, mobile app, web app, or calling us by phone, basically we can always, or customer can always search, see the details of the product, see the current prices, and see the stock of product, so how many we have them currently.
+
+53
+00:11:29,270 --> 00:11:56,870
+So those are the critical areas because that should be always available for our customers and should be scaled up to appropriate for the season or appropriate for the you know release of new trending technology or whatever.
+
+54
+00:11:56,870 --> 00:11:59,880
+If we if you ask where those data came from,
+
+55
+00:12:00,390 --> 00:12:06,070
+That's obvious they came from the product catalog management area.
+
+56
+00:12:06,070 --> 00:12:12,710
+But if you ask where those data came from about the product stock, yeah, that's the different source.
+
+57
+00:12:12,710 --> 00:12:24,710
+We have warehousing system, it is off-the-shelf product, so we don't develop it internally, and it has some APIs, basically.
+
+58
+00:12:24,710 --> 00:12:44,790
+You can check the stock of the product, the system will inform you when the product stock is changed, and we can reserve some product, or we can request to put something on the warehouse or take something from the warehouse.
+
+59
+00:12:44,790 --> 00:12:53,830
+Yeah, so that's the functionality we know we have in the work warehouse API.
+
+60
+00:12:53,830 --> 00:12:55,510
+Okay.
+
+61
+00:12:55,510 --> 00:13:00,870
+Another area is the shopping experience, let's say.
+
+62
+00:13:00,870 --> 00:13:11,350
+So maybe basket management is kind of stupid name, but basically that's the the shopping process.
+
+63
+00:13:11,350 --> 00:13:28,870
+ customer can pick something from our offer and give it to the put it into the basket, he can remove change the amount, so there's a very simple standard working with basket or cart.
+
+64
+00:13:28,870 --> 00:13:35,270
+And of course, customer can see what currently has in the cart.
+
+65
+00:13:35,270 --> 00:13:41,190
+And all those actions are quite trivial, basically, it is just purely management of the basket.
+
+66
+00:13:41,190 --> 00:13:46,470
+What is important, normal behavior is we don't reserve products.
+
+67
+00:13:46,470 --> 00:13:57,750
+If there is a limited stock, putting 10 pieces into the basket doesn't guarantee you you have that product.
+
+68
+00:13:57,750 --> 00:14:04,150
+But we may have some reservations as well, but not on that scale.
+
+69
+00:14:04,150 --> 00:14:26,630
+Another important thing, if you put something into the basket, but then product is removed from the offer, we don't want that product magically disappear from the basket of the client, but we want to mark it red or whatever that it is no longer available.
+
+70
+00:14:26,630 --> 00:14:29,030
+Same if there is out of stock.
+
+71
+00:14:29,030 --> 00:14:50,520
+So it's still in the basket, but customers should be aware that we have a stock issues, and he may even still order products which are which we are out of stock, but basically the delivery time will be longer than client expects, let's say.
+
+72
+00:16:01,750 --> 00:16:09,830
+Including discounts.
+
+73
+00:16:09,830 --> 00:16:21,990
+So client may have applied or we can apply automatically some discounts on the basket, and they can be changed as well on the on the on the next stage, but yeah.
+
+74
+00:16:21,990 --> 00:16:58,070
+ clients is seeing the content with the estimated delivery time and price, and some issues let's say non-blocking problem or blocking problem blocking the checkout.
+
+75
+00:16:58,070 --> 00:17:26,070
+Maybe I will put it to different that color means that's some key decision or key calculation we are doing on that stage, and that basically is calculated when you change something in the basket, we need to present it to the user with the feedback.
+
+76
+00:17:26,070 --> 00:17:58,470
+Okay, and if customer decides that it is going to the checkout, then we have small process when we present the payment options, delivery options,, and we can present him the previews customer data invoicing data, so he doesn't need to fill them one more time if he if that is recurring customer going customer returning to us.
+
+77
+00:17:58,470 --> 00:18:05,110
+And basically those payments methods may depend on what we have into the in bill basket.
+
+78
+00:18:05,110 --> 00:18:13,990
+So that's one case, and second important thing is delivery methods may depend as well on content of the basket.
+
+79
+00:18:13,990 --> 00:18:36,710
+So let's say if you want to deliver it to the Paczkomat, it will not work if you have wash machine or or refrigerator in the basket because it basically will not fit.
+
+80
+00:18:36,710 --> 00:18:56,070
+And same with payment methods, we may pick the third-party payment, for example, so you will pay not immediately but after a month or something like that, but only to some degree if you don't have issues in our database or whatever, or or in our partners, you are not restricted from that method.
+
+81
+00:18:56,070 --> 00:19:11,270
+So those policies are let's say quite complex, so they may be quite complex in the first place to to implement fully.
+
+82
+00:19:11,270 --> 00:19:26,550
+Okay, but if you go into the checkout, you will see some options you have, and you basically need to pick of the pick some of those, and you need feel some data about the customer delivery location and invoicing stuff.
+
+83
+00:19:26,550 --> 00:19:59,880
+, yeah, and if you know already something about you, if you know already something about the customer, we have it, we can present the previous one, maybe even multiple ones, so if you deliver it into few places at your home to your home or to your office, you can pick basically or create another.
+
+84
+00:20:07,750 --> 00:20:11,510
+So that's this part.
+
+85
+00:20:11,510 --> 00:20:18,070
+And then you have terminal action to basically process the checkout.
+
+86
+00:20:18,070 --> 00:20:20,230
+And it is guarded action as well.
+
+87
+00:20:20,230 --> 00:20:22,950
+So we need to have all that matching.
+
+88
+00:20:22,950 --> 00:20:35,030
+ you pick delivery method which is feasible for that content of the order of the basket.
+
+89
+00:20:35,030 --> 00:20:44,630
+And we have all the data needed for processing.
+
+90
+00:20:44,630 --> 00:20:53,030
+We have an obligation obligation as a company to deliver those goods to you theoretically.
+
+91
+00:20:53,030 --> 00:21:02,550
+ it is important that we validate everything.
+
+92
+00:21:02,550 --> 00:21:09,510
+And it expose basically data about customer, previous invoicing data, etc.
+
+93
+00:21:09,510 --> 00:21:14,390
+And we can save the new data as well in the in the CRM.
+
+94
+00:21:14,390 --> 00:21:19,350
+So that's existing system, and we need to integrate with it.
+
+95
+00:21:19,350 --> 00:21:32,070
+And if the checkout is processed correctly, and we have new order in the system, that's as well information which is interesting for the CRM.
+
+96
+00:21:32,070 --> 00:21:41,670
+So we would like to have CRM history of orders for given customer and the actual and historical data about the customer.
+
+97
+00:21:41,670 --> 00:21:48,310
+Okay.
+
+98
+00:21:48,310 --> 00:21:57,030
+And from that point order is basically immutable document which is let's say immutable.
+
+99
+00:21:57,030 --> 00:22:02,790
+So theoretically, in normal processing, we shouldn't add it anything on the order.
+
+100
+00:22:02,790 --> 00:22:15,030
+Of course, there are few cases, special cases, when during fulfillment of the order, we see that there is something missing on our warehouse.
+
+101
+00:22:15,030 --> 00:22:19,910
+ we don't have physically that product.
+
+102
+00:22:19,910 --> 00:22:24,070
+Then we need to contact the customer and negotiate what to do.
+
+103
+00:22:24,070 --> 00:22:35,590
+Maybe some replacement, maybe he will cancel the order entirely, or basically we will take any item from the order and deliver without it.
+
+104
+00:22:35,590 --> 00:22:38,790
+But that is done outside of the system.
+
+105
+00:22:38,790 --> 00:22:46,310
+It is always some negotiation with the customer, he needs to agree, and we need to find the proper solution for given situation.
+
+106
+00:22:46,310 --> 00:22:51,990
+So from that system perspective, basically order is immutable, we basically need to fulfill it.
+
+107
+00:22:51,990 --> 00:23:08,230
+And when something went wrong, we fall back into the manual scenario, and after manual scenario, we basically have different orders, so adjusted order.
+
+108
+00:23:08,230 --> 00:23:11,590
+So that's important.
+
+109
+00:23:11,590 --> 00:23:24,070
+Okay, let's go into the fulfillment area, so the order processing, basically area when we need to pack those items and send them to to our customer.
+
+110
+00:23:24,070 --> 00:23:42,070
+On the start we have basically an order, we always see the current orders list, and basically some status it is processed or it is pending, or it is already waiting on the on the delivery guy or whatever.
+
+111
+00:23:42,070 --> 00:23:50,710
+And basically some employee on the warehouse can assign himself or herself to give an order.
+
+112
+00:23:50,710 --> 00:23:55,670
+So we want to protect that two employees accidentally is processing the same order.
+
+113
+00:23:55,670 --> 00:23:59,640
+We don't want accidentally send twice those goods to our
+
+114
+00:24:00,000 --> 00:24:10,550
+For customers, so it is let's say protected, guarded that only one person can be assigned at a time.
+
+115
+00:24:10,550 --> 00:24:29,750
+In addition, on the very beginning, we can get the delivery numbers, we can call shipping or some provider of the transport that we want to register that parcel.
+
+116
+00:24:29,750 --> 00:24:39,510
+And we will get some vendor ID, so provider ID, and we want to attach it to that order processing.
+
+117
+00:24:39,510 --> 00:24:46,550
+We want to assign an employee, and the employee gets the pick list.
+
+118
+00:24:46,550 --> 00:24:55,750
+ that's the optimized list, which product needs to be taken from the warehouse and put into the package.
+
+119
+00:24:55,750 --> 00:25:19,910
+Optimized so we know how to walk through the through the warehouse in optimal way to basically collect all those all those product.
+
+120
+00:25:19,910 --> 00:25:35,670
+Okay, and employee need to basically pick those things, scan them, so we have some confirmation that he packed those items, and we mark those positions basically as packed.
+
+121
+00:25:35,670 --> 00:25:51,670
+And of course, employees seeing on one screen the pick list and the state of the processing, he he knows what he already packed, picked, etc.
+
+122
+00:25:51,670 --> 00:26:17,910
+Yeah, and probably when everything went correctly, he can mark that this order is done is ready for delivery, which marks it in our system, plus we can make a request to deliver it, a company that the parcel is ready for delivery.
+
+123
+00:26:17,910 --> 00:26:23,270
+Okay, they know they should pick it.
+
+124
+00:26:23,270 --> 00:26:32,230
+And from that point, they will notify us about update of the delivery state.
+
+125
+00:26:32,230 --> 00:26:55,270
+ he will notice us that we register the parcel, they will notice us that we mark it as ready as delivery, they will notice us when they will assign someone to pick it, they will notice us when they will pick it, they will notice us when they will be you know in the sorting facility, etc.
+
+126
+00:26:55,270 --> 00:27:11,830
+So the through the roads from from transport unit to transport unit, the full every leg in the transporting chain, we will get some notification, and at the end they will notify us that customer picked it.
+
+127
+00:27:11,830 --> 00:27:15,750
+So customer get the product basically.
+
+128
+00:27:15,750 --> 00:27:19,430
+So the full chain of the delivery will be notified.
+
+129
+00:27:19,430 --> 00:27:34,550
+ in the same fulfillment area, it is important that we integrate with the warehouse to basically get the location of the product and reserve the product.
+
+130
+00:27:34,550 --> 00:27:55,830
+, when you go for it, or basically where you start when you when you get the pick list, you would want to say, okay, I am taking two units, and you will go to that place and basically take two units, and you don't want in the meantime some other employee to take last two units, for example.
+
+131
+00:27:55,830 --> 00:27:59,880
+So there is some kind of short term.
+
+132
+00:28:00,150 --> 00:28:09,750
+Reservation on the side of the warehouse basically to avoid collisions between employees.
+
+133
+00:28:09,750 --> 00:28:22,550
+Yeah, and of course we got the notification of the stock changes so theoretically on the pick list, our employee could see as well how much of those items is in which places.
+
+134
+00:28:22,550 --> 00:28:34,550
+So for example, if there if he has last two, that's important information that he should be first at the place to take them.
+
+135
+00:28:34,550 --> 00:28:55,670
+Okay, and basically when everything is ready on the fulfillment, we see already in the warehouse that the stock is changed when he picked it, and we see that there is a delivery ongoing or started.
+
+136
+00:28:55,670 --> 00:29:08,070
+Yeah, so that's the fulfillment part, and there is a part, of course, for the customer where he is notified about all those states.
+
+137
+00:29:08,070 --> 00:29:35,030
+So we can add into let's say each area that is all the order processing state is updated basically during the fulfillment process.
+
+138
+00:29:35,030 --> 00:29:49,270
+So after each event that read model have some new information after each event from the delivery company that read model have some new information.
+
+139
+00:29:49,270 --> 00:30:23,590
+Yeah, and we should give some alternative action for that happy path when the user is saying everything is done and ready for delivery, we should give the user the fallback basically for mark some problems.
+
+140
+00:30:23,590 --> 00:30:31,910
+So for example, warehouse system is saying that we have two last units, but we cannot find them.
+
+141
+00:30:31,910 --> 00:30:35,750
+They are lost, destroyed, stolen, whatever.
+
+142
+00:30:35,750 --> 00:30:40,230
+Basically, the reality of the warehouse is not expressed correctly in the system.
+
+143
+00:30:40,230 --> 00:30:44,070
+So that's some situation which may happen.
+
+144
+00:30:44,070 --> 00:30:51,430
+Let's believe that will never happen, but the truth is it will happen.
+
+145
+00:30:51,430 --> 00:30:57,590
+ to help the employee to basically manage that situation.
+
+146
+00:30:57,590 --> 00:31:05,030
+ let's let's basically mark that.
+
+147
+00:31:05,030 --> 00:31:16,470
+And we should have for some other personnel read model with the current issues on the warehouse.
+
+148
+00:31:16,470 --> 00:31:24,630
+You can imagine that basically that order is on hold.
+
+149
+00:31:24,630 --> 00:31:45,590
+So if we have issue, order is on hold, and someone else will see issue on his dashboard, and for example, some warehouse employee will need to go and look for missing pieces.
+
+150
+00:31:45,590 --> 00:31:48,550
+Maybe someone put them on the warehouse in wrong place.
+
+151
+00:31:48,550 --> 00:31:59,960
+ we have them physically, but we don't know the correct location that can happen,, but we need to find it and correct the the warehouse.
+
+152
+00:32:02,390 --> 00:32:03,110
+Okay.
+
+153
+00:32:03,110 --> 00:32:04,840
+So maybe let's let's finish it.
+
