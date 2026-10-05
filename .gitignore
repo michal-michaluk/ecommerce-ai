@@ -12,6 +12,9 @@ replay_pid*
 .settings/
 .mtj.tmp/
 
+# --- AI harness ---
+.pi/tasks
+
 # --- Maven ---
 target/
 pom.xml.tag
@@ -53,6 +56,7 @@ Thumbs.db
 # --- Node / tooling ---
 node_modules/
 .playwright-cli/
+.storybook/storybook-static/
 
 # --- Binary / generated assets ---
 *.mp4

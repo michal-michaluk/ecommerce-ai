@@ -1,0 +1,36 @@
+# software-delivery-platform config — which platform(s) and how to connect.
+# Read by the `software-delivery-platform` skill.
+default_platform: github
+workspace: michal-michaluk
+
+platforms:
+  github:
+    cli: gh
+    host: github.com
+    users: [michal-michaluk]
+    repos: [michal-michaluk/ecommerce-ai]
+
+conventions:
+  worklog: comment            # where work session data lands: comment | body-section | label | custom-field
+  worklog_fields: [tokens, model]
+
+git:
+  base_branch: main
+  feature_branch_prefix: feat
+  wip_branch_prefix: wip
+  commit_scope: auto
+
+pr:
+  draft: false
+  labels: []
+  include_video: true
+
+labels:
+  triage:
+    bug: bug
+    enhancement: enhancement
+    needs-triage: needs-triage
+    needs-info: needs-info
+    ready-for-agent: ready-for-agent
+    ready-for-human: ready-for-human
+    wontfix: wontfix

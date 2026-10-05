@@ -1,0 +1,179 @@
+{
+  "blueprints": [
+    {
+      "name": "android-compose",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": false,
+      "has_example": false,
+      "template_params": [],
+      "docs_preview": ""
+    },
+    {
+      "name": "cli-rust",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# CLI Rust Architecture Guide — Unified Track\n\nThis is the unified documentation track combining the best patterns from [ripgrep](https://github.com/BurntSushi/ripgrep) (performance, builder, cross-platform) and [agent-cli-framework](https://github.com/paperfoot/agent-cli-framework) (JSON envelope, exit contracts, agent discoverability, config). Files from these two source sets were selected to eliminate contradictions — use this track for implementation, not the source docs directly.\n\nFor a complete working example implementing every pattern, see `agent-cli-framework/example/` in this repository.\n\n## Architecture & setup\n\n- **module-layout.md** — organize src/ into focused modules\n- **crate-workspace.md** — split into workspace crates (for larger projects)\n- **builder-pattern.md** — Builder pattern for configurable components\n- **push-model-pipeline.md** — trait-based processing pipeline\n\n## CLI interface\n\n- **clap-derive-commands.md** — Clap derive for Cli + Commands + args\n- **dual-output-format.md** — auto-detect TTY vs pipe for JSON/human output\n- **json-envelope.md** — standard JSON envelope for all responses\n- **non-interactive-design.md** — no prompts, --confirm flag, exit on missing auth\n"
+    },
+    {
+      "name": "cli-rust-arch",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": false,
+      "has_example": false,
+      "template_params": [],
+      "docs_preview": ""
+    },
+    {
+      "name": "desktop-rust-gpui",
+      "description": "Runnable reference for a GPUI desktop app whose business core is a separate, platform-independent Rust artefact — shared core (actor/repository + REST/SSE) behind a thin rsx UI, with consumer-driven pact contracts verified against a local stub.",
+      "stack": "Rust 1.95.0 (edition 2024), GPUI 0.2.2 (runtime_shaders), gpui-component 0.5.1, gpui-rsx (vendored fork @ b8d3d49), tokio, reqwest, axum, pact (pact_consumer / pact_verifier 1.4.x), macOS",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# desktop-rust-gpui Blueprint\n\nRunnable reference for a GPUI desktop app whose business core is a separate, platform-independent Rust artefact — zero gpui in core, actor/repository + REST/SSE behind a thin rsx UI, consumer-driven pact contracts verified against a local stub. The v2 example (change-on-top) assembles a **dock app shell** (`DockArea`: left sidebar, center tabview, collapsed bottom/right docks) and a **Configuration modal built from the stock gpui-component `Settings` shell** — schema-driven typed fields per config key (`GET /configs/{key}/schema`), live-save per field over PUT, built-in Reset All.\n\n## Stack\n\n| Layer | Technology |\n|-------|-----------|\n| Language | Rust 1.95.0 (`rust-toolchain.toml` per crate), edition 2024, macOS only (A2) |\n| UI framework | GPUI 0.2.2 (`default-features=false`, `runtime_shaders`) |\n| UI components | gpui-component 0.5.1 (`default-features=false`) |\n| rsx macro | gpui-rsx **vendored fork** @ commit `b8d3d49` (`no_id` + `key`→`SharedString` fixes — no crates.io publish, B1) |\n| Core | tokio (`rt-multi-thread`, `macros`, `sync`), reqwest (`json`, `streaming`), serde/serde_json, chrono |\n| Stub | axum 0.8, tokio, tokio-stream, serde_json |\n| Contract testing | `pact_consumer` 1.4.x (core dev-dep) · `pact_verifier` 1.4.x (stub dev-dep) |\n| UI extras | rust-i18n 3, uuid (v4 instance ids), tokio (`sync` only — no runtime), chrono, serde_json, image + ab_glyph (storybook screenshot fallback) |\n\n## Doc map\n\n| Doc | When to read |"
+    },
+    {
+      "name": "desktop-rust-gpui-native-surfaces",
+      "description": "Runnable reference for a **GPUI desktop app hosting real native surfaces** —",
+      "stack": "Rust 1.95.0 (edition 2024), GPUI 0.2.2 (crates.io, `runtime_shaders`),",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# desktop-rust-gpui-native-surfaces Blueprint\n\nRunnable reference for a **GPUI desktop app hosting real native surfaces** on\ncrates.io gpui — live video (libVLC), a 3D viewport, an embedded PTY terminal\nand a WebView — plus the full gpui-component widget gallery.\n\n## Stack\n\n| Layer | Technology |\n|-------|-----------|\n| Language | Rust 1.95.0 (`rust-toolchain.toml` per crate), edition 2024, macOS only (A2) |\n| UI framework | GPUI 0.2.2 (`default-features=false`, `runtime_shaders`) — crates.io |\n| UI components | gpui-component 0.5.1 (`default-features=false`, `webview` feature) — crates.io |\n| rsx macro | gpui-rsx **vendored fork** @ commit `9cf78d5` — a standalone library deliverable under `lib/` (B1, no crates.io publish) |\n| Video | libVLC **dlopened at runtime** via `libloading` (LGPL dynamic-link — no crate dep) |\n| Terminal | gpui-terminal 0.1.0 + portable-pty 0.9 |\n| WebView | gpui-component `webview` feature → lb-wry 0.53.3 (WKWebView) |\n| Misc | image 0.25, parking_lot, smallvec, rust-i18n 3, serde/serde_json |\n\n## Doc map"
+    },
+    {
+      "name": "desktop-tauri",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Desktop Tauri Blueprint\n\nA comprehensive blueprint for building high-quality desktop applications with **Tauri v2**, **Rust**, and **React**.\n\n## Stack\n\n| Layer | Technology |\n|-------|-----------|\n| Desktop framework | Tauri v2 |\n| Backend | Rust 1.85+ (tokio, sqlx) |\n| Frontend | React 19 + TypeScript 5.x |\n| Bundler | Vite 6 |\n| Styling | Tailwind CSS 4 + shadcn/ui |\n| State management | Zustand 5 |\n| IPC bridge | tauri-specta (auto-generated typed bindings) |\n| Database | SQLite via sqlx + migrations |\n| Package manager | pnpm 10 |\n\n## Source Repos\n"
+    },
+    {
+      "name": "ios-swiftui",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": false,
+      "has_example": false,
+      "template_params": [],
+      "docs_preview": ""
+    },
+    {
+      "name": "microservice-java-spring",
+      "description": "Spring Boot microservice blueprint with full quality gates (G0–G6).",
+      "stack": "Java 25, Spring Boot 4.0.6, Gradle 9.5.1",
+      "has_template": true,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [
+        {
+          "name": "micro_name",
+          "type": "string",
+          "default": "com.example"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "default": "A microservice"
+        },
+        {
+          "name": "db_name",
+          "type": "string",
+          "default": "scaffold-index"
+        },
+        {
+          "name": "guardrail_mode",
+          "type": "string",
+          "default": "strict",
+          "choices": [
+            "basic",
+            "strict"
+          ]
+        }
+      ],
+      "docs_preview": "## Mandatory Workflow\n\nThis repository uses architecture-first development. Before coding, load the relevant docs from `docs/arch` and follow them strictly.\n\n1. Identify the task type (domain change, API, persistence, projection, cross-context flow, tests).\n2. Read matching doc files listed below.\n3. Implement only through existing architectural patterns.\n4. Add or update tests in the same context package.\n5. Verify ArchUnit constraints remain valid.\n\nIf a task touches multiple contexts, read `context-boundaries.md` and `adapter-mediator.md` first.\n\n### Document Map\n\n| File | What it covers |\n|------|----------------|\n| `code-structure.md` | Package layout, naming conventions, module organization |\n| `ports.md` | Primary/secondary ports and mediator-based cross-context contracts |\n| `domain-model.md` | Aggregates, value objects, domain events, invariant placement |\n| `policy.md` | Business calculations and decision policies |"
+    },
+    {
+      "name": "microservice-rust",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Documentation Index\n\nUniversal instructions for building a conforming Rust microservice (axum + sqlx, bounded contexts, ports & adapters, DDD, semantic errors, Keycloak, OTel, k8s). Each entry is imperative: read the doc when doing that task. Code examples use the tenant-scoped settings store as the recurring worked example.\n\n## Architecture & structure\n\n**code-structure.md** — read when scaffolding a new slice/module or deciding where a file goes (the generalized per-context flat, business-named layout: `model.rs`, `settings.rs`, `settings_repository.rs`, `pg_settings.rs`, `error.rs`, `rest.rs`).\n\n**vertical-slices.md** — read when converting a layered codebase into slices, or when explaining the C2 layered → sliced transform (the settings bounded context as the worked example).\n\n**bounded-contexts.md** — read when deciding a context's boundary, its public surface, or how two contexts interact (only via ports/events, never direct imports or cross-DB).\n\n**ports-and-adapters.md** — read when defining a port (service/repository trait), building an adapter, or wiring the composition root (generic ports with native `async fn`, static dispatch — no `Arc<dyn …>`, no `#[async_trait]`).\n\n**ddd-building-blocks.md** — read when modeling an aggregate or value object, enforcing invariants, or emitting domain events.\n\n## Persistence & data\n\n**sqlx-persistence.md** — read when writing a repository adapter, a `query!`/`query_as!`, or reconciling an adapter record with a domain aggregate. (sqlx only — not an ORM.)\n"
+    },
+    {
+      "name": "web-agentic",
+      "description": "Agentic web application blueprint — a browser UI for an AI coding agent.",
+      "stack": "Next.js 16, React 19, pi SDK (@earendil-works/pi-*), TypeScript",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Web Agentic — Architecture Guide\n\nUnified documentation track for building **browser UIs around an agent SDK**. The reference\nimplementation is the [Pi Web](https://github.com/agegr/pi-web) application — a production Next.js\n16 web app that hosts pi coding-agent sessions in the browser: browse and resume conversations,\nsend messages, watch tool calls stream in, configure models and skills, and inspect project files.\n\nThe docs below are written from the real Pi Web codebase (`example/` in this blueprint).\nEach pattern names the exact module that implements it.\n\n## Architecture & setup\n\n- **architecture.md** — system diagram: Browser ↔ Next.js server ↔ in-process AgentSession\n- **api-routes.md** — the full route map (sessions, agent RPC, SSE, auth, files, worktrees)\n- **module-layout.md** — how `app/api`, `lib`, `components`, and `hooks` are organized\n- **deployment.md** — shipping as an npx package, bin entry, ports, HTTP Basic Auth\n\n## Session lifecycle & streaming\n\n- **session-rpc.md** — AgentSession lifecycle: registry on `globalThis`, idle timeout, fork, startup preferences"
+    },
+    {
+      "name": "web-angular",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": false,
+      "has_example": false,
+      "template_params": [],
+      "docs_preview": ""
+    },
+    {
+      "name": "web-knowledge-graph",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Web Knowledge Graph — Architecture Blueprint\n\nA 3D knowledge-graph SPA: terms as nodes, cross-references as edges, laid\nout in space and explorable by hover, focus, search and section filter.\nRecreated from the deployed `aicodingdictionary.com` atlas (mattpocock's\n*dictionary-of-ai-coding*) — the reference implementation's bundle was\nreverse-engineered and every pattern here is a faithful transcription.\n\n**Stack:** Vite · React 19 · TypeScript · three.js · @react-three/fiber 9 ·\ncamera-controls · postprocessing · troika-three-text · zustand\n\n## Topic map\n\n- **architecture.md** — read when starting: the stack, the render tree,\n  the data flow from markdown to baked JSON to GPU\n- **data-model.md** — read when working with content: the graph JSON\n  schema, the md→json generator (`scripts/build-graph.mjs`, d3-force-3d),\n  and why the shipped artifact uses the reference's baked layout\n- **atlas-scene.md** — read when touching the 3D scene: scene layers,\n  render order, the three custom shaders (nodes / edges / points) and the"
+    },
+    {
+      "name": "web-microfrontend",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Web Microfrontend Blueprint — Dokumentacja Architektoniczna\n\n## Przegląd\n\nBlueprint **web-microfrontend** to kompletny, wielorepozytoryjny wzorzec architektoniczny dla aplikacji mikrofrontendowych. Zapewnia działający przykład (3 repozytoria), dokumentację architektoniczną oraz szablon cargo-generate do bootstrapu nowych projektów.\n\n## Stack technologiczny\n\n| Warstwa | Technologia |\n|---|---|\n| Meta-framework | **Astro 7** (SSR, Server Islands, View Transitions) |\n| UI Framework | **React 19** (interaktywne wyspy) |\n| Design System | **shadcn/ui** v4 + Tailwind CSS v4 |\n| Module Federation | `@module-federation/astro` v2 |\n| Stan | Nano Stores + MF shared scope |\n| Storybook | Per-MFE z `@storybook/addon-mcp` |\n\n## Struktura 3-repozytoryjna\n\n```"
+    },
+    {
+      "name": "web-react-rust-wasm",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# Documentation Index\n\nUniversal instructions for building a conforming **web-react-rust-wasm** app: a **React 19 + shadcn/ui + Storybook** thin UI over a **Rust-WASM business core**, talking to the `microservice-rust` `settings-service` backend. Each entry is imperative — read the doc when doing that task. The recurring worked example is the **tenant-scoped settings editor** (login/logout via Keycloak, shell/sidebar, reactive settings list).\n\nThe three non-negotiable references beneath all of these:\n\n- `architecture.md` — the core↔UI↔composition-root split and the unidirectional reactive data flow (the **frontend contract**, `ui-architecture-requirements.md`, applied to React + Rust-WASM).\n- `security.md` — the **frontend security contract** (`security-requirements.md` B/C/D series) as wired into this example.\n- `module-layout.md` — the physical crate/layer layout the other docs assume.\n\n## Core (the Rust-WASM boundary)\n\n- **wasm-coreboundary.md** — read when implementing the Rust core: value types crossing, reactive streams (subscribe → snapshot → change → unsubscribe), the `#[wasm_bindgen]` JS surface, and the native-vs-wasm testability split.\n- **transport-port.md** — read when implementing/calling the settings API: the swappable `SettingPort`, the REST+NDJSON wire contract, ETag/`If-Match` optimistic concurrency, and the semantic error taxonomy → `CoreError`.\n\n## UI (React components)\n\n- **react-components.md** — read when writing/refactoring a component: thin, prop-driven, seam-free, view-local state only, interface segregation at the boundary.\n- **ui-design-system.md** — read when adding UI: shadcn/ui primitives, reuse-not-rebuild rule (B1/B2), theming, styling rules.\n- **storybook.md** — read before/while writing a component: Storybook-first with injected handler doubles, headless, the correctness gate for a component."
+    },
+    {
+      "name": "web-solidjs",
+      "description": "",
+      "stack": "",
+      "has_template": false,
+      "has_docs": true,
+      "has_example": true,
+      "template_params": [],
+      "docs_preview": "# web-solidjs Architecture Guide\n\nUnified documentation track combining patterns from [solid-start](https://github.com/solidjs/solid-start) (meta-framework, SSR, file-based routing) and [@solidjs/router](https://github.com/solidjs/solid-router) (routing, data fetching, caching). Files from both sources were combined to produce a single consistent track — use these docs for implementation.\n\nFor a complete working example implementing every pattern, see `example/` in this directory.\n\n## Architecture & setup\n\n- **vite-config.md** — configure Vite + vite-plugin-solid for client and SSR\n- **module-layout.md** — organize src/ into routes, components, lib, and tests\n- **routing.md** — file-based and config-based routing with @solidjs/router\n\n## Components & reactivity\n\n- **component-architecture.md** — component patterns, composition, props\n- **reactivity-patterns.md** — signals, effects, memos, stores, and resources\n- **css-styling.md** — CSS Modules, global styles, code-split CSS\n\n## Data & server\n"
+    }
+  ]
+}

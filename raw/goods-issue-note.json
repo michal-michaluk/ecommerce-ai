@@ -1,0 +1,112 @@
+{
+  "source_file": "raw/goods-issue-note.png",
+  "document": {
+    "type": "Goods Issue Note / Wydanie Zewnętrzne (WZ)",
+    "number": "WZ 1/10/2019",
+    "issued_place": "Katowice",
+    "issued_date": "2019-10-05",
+    "brand": "[FakturaXL.pl]"
+  },
+  "seller": {
+    "name": "Firma ABC",
+    "street": "ul. Szkocka 2",
+    "postal_code": "44-555",
+    "city": "Katowice",
+    "nip": "9729002729",
+    "email": "firma@fakturaxl.pl"
+  },
+  "buyer": {
+    "name": "ProMedia Sp. z o.o.",
+    "street": "ul. Stawowa 38",
+    "postal_code": "00-967",
+    "city": "Warszawa",
+    "nip": "9372424178"
+  },
+  "receiver": {
+    "name": "Handel s.c.",
+    "street": "ul. Prosta 8",
+    "postal_code": "00-121",
+    "city": "Warszawa",
+    "nip": "5111625852"
+  },
+  "items": {
+    "columns": [
+      "LP",
+      "Nazwa towaru/usługi",
+      "Ilość",
+      "Cena netto",
+      "Wartość netto",
+      "VAT",
+      "Wartość VAT",
+      "Wartość brutto"
+    ],
+    "rows": [
+      {
+        "lp": 1,
+        "name": "Meble ogrodowe",
+        "quantity": "1 szt.",
+        "unit_price_net": 16200.00,
+        "net_value": 16200.00,
+        "vat_rate": 23,
+        "vat_value": 3726.00,
+        "gross_value": 19926.00
+      },
+      {
+        "lp": 2,
+        "name": "Dostawa",
+        "quantity": "1 szt.",
+        "unit_price_net": 10.00,
+        "net_value": 10.00,
+        "vat_rate": 23,
+        "vat_value": 2.30,
+        "gross_value": 12.30
+      }
+    ]
+  },
+  "related_documents": [
+    {
+      "lp": 1,
+      "type": "FV",
+      "number": "1/06/2019",
+      "date": "2019-06-28"
+    }
+  ],
+  "summary": {
+    "headers": ["Wartość netto", "Stawka VAT", "VAT", "Wartość brutto"],
+    "values": {
+      "net_value": 16210.00,
+      "vat_rate": "23%",
+      "vat_value": 3728.30,
+      "gross_value": 19938.30
+    },
+    "total_row": {
+      "label": "Razem:",
+      "net_value": "16210.00 PLN",
+      "vat_value": "3728.30 PLN",
+      "gross_value": "19938.30 PLN"
+    },
+    "in_words": {
+      "label": "Słownie:",
+      "value": "dziewiętnaście tysięcy dziewięćset trzydzieści osiem i 0,30 PLN"
+    },
+    "notes": {
+      "label": "Uwagi:",
+      "value": "Dostawa z magazynu głównego. Odbiór po godzinie 15."
+    }
+  },
+  "signatures": {
+    "received_by": {
+      "label": "Odebrał",
+      "name": "Jan Kowalski"
+    },
+    "issued_by": {
+      "label": "Wystawił",
+      "name": "Krzysztof Nowak"
+    }
+  },
+  "footer": {
+    "print_source": "Druk: www.fakturaxl.pl",
+    "message": "Stosujemy opakowania recyklingowe!",
+    "page": "Strona: 1/1"
+  }
+}
