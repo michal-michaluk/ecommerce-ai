@@ -55,7 +55,4 @@ node_modules/
 .playwright-cli/
 
 # --- Binary / generated assets ---
-*.mov
 *.mp4
-*.hevc.mp4
-*.lockb
