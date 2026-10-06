@@ -128,6 +128,12 @@ class Product {
                 draftState, createdAt, lastChange, versions, publications);
     }
 
+    /** The stored document: {@code visibleVersion}/{@code scheduledVersion} are derived, never persisted (RULE-4). */
+    ProductSnapshot toSnapshot() {
+        return new ProductSnapshot(productId, offerPresence, null, null,
+                draftState, createdAt, lastChange, versions, publications);
+    }
+
     private void checkApproved(DescriptionVersion version) {
         if (draftState != DraftState.APPROVED) {
             throw new VersionNotApproved(version.version());

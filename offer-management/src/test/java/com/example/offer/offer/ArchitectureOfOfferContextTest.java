@@ -20,12 +20,13 @@ class ArchitectureOfOfferContextTest {
     static final DescribedPredicate<JavaClass> sharedKernelExposed = belongToAnyOf(
             DescriptionVersion.class, Publication.class, PublicationState.class,
             OfferPresence.class, OfferState.class, VisibleVersion.class,
-            ProductSnapshot.class, DraftState.class, DomainEvent.class);
+            ProductSnapshot.class, DraftState.class, DomainEvent.class,
+            Completeness.class, Completeness.MissingRequirement.class,
+            CompletenessPolicy.class, Decisions.class, Decisions.Decision.class,
+            TextCheck.class, TextIssue.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
             Identity.class, Audit.class);
-
-    // No services yet; the repository ports are this context's only adapters.
 
     @ArchTest
     static final ArchRule adaptersDependencies =

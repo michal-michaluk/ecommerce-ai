@@ -1,0 +1,116 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0004-offer-document
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: product_document
+            columns:
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0004-offer-events
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: product_events
+            columns:
+              - column:
+                  name: sequence
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0004-offer-description-version
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: description_version_document
+            columns:
+              - column:
+                  name: id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: version_label
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lock_version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description_version
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0004-offer-publication
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: publication_document
+            columns:
+              - column:
+                  name: publication_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: lock_version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: publication
+                  type: jsonb
+                  constraints:
+                    nullable: false
