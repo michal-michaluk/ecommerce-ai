@@ -13,7 +13,9 @@ import com.example.offer.offer.OfferPresence;
 import com.example.offer.offer.ProductSnapshot;
 import com.example.offer.offer.Publication;
 import com.example.offer.pricing.DateRange;
+import com.example.offer.pricing.Discount;
 import com.example.offer.pricing.Money;
+import com.example.offer.pricing.Percent;
 import com.example.offer.pricing.Price;
 import com.example.offer.pricing.PriceScheduleSnapshot;
 
@@ -81,5 +83,12 @@ final class CatalogFixture {
                 List.of(new Price("pr-1", productId, Money.of("259.00", "PLN"),
                         DateRange.from(LocalDate.now().minusDays(10)))),
                 List.of());
+    }
+
+    static PriceScheduleSnapshot activePriceWithDiscount(String productId) {
+        LocalDate from = LocalDate.now().minusDays(10);
+        return new PriceScheduleSnapshot(productId,
+                List.of(new Price("pr-1", productId, Money.of("259.00", "PLN"), DateRange.from(from))),
+                List.of(new Discount("di-1", productId, Percent.of("10"), DateRange.from(from))));
     }
 }

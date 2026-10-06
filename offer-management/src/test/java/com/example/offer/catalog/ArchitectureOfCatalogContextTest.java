@@ -17,7 +17,13 @@ import com.example.offer.offer.OfferState;
 import com.example.offer.offer.ProductSnapshot;
 import com.example.offer.offer.Publication;
 import com.example.offer.offer.PublicationState;
+import com.example.offer.offer.ScheduledVersion;
 import com.example.offer.offer.VisibleVersion;
+import com.example.offer.pricing.Discount;
+import com.example.offer.pricing.Money;
+import com.example.offer.pricing.MoneyView;
+import com.example.offer.pricing.Percent;
+import com.example.offer.pricing.Price;
 import com.example.offer.pricing.PriceScheduleSnapshot;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
@@ -42,9 +48,10 @@ class ArchitectureOfCatalogContextTest {
             DraftSnapshot.class, DraftState.class, DraftAttributes.class, Title.class, Description.class,
             ReviewRequest.class,
             ProductSnapshot.class, OfferPresence.class, OfferState.class, Publication.class,
-            PublicationState.class, VisibleVersion.class, DescriptionVersion.class,
+            PublicationState.class, VisibleVersion.class, ScheduledVersion.class, DescriptionVersion.class,
             Completeness.class, Completeness.MissingRequirement.class, CompletenessPolicy.class,
-            PriceScheduleSnapshot.class);
+            PriceScheduleSnapshot.class, Price.class, Discount.class,
+            Money.class, MoneyView.class, Percent.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelExposed = DescribedPredicate.alwaysFalse();
 

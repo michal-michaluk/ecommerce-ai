@@ -103,15 +103,11 @@ class PriceSchedule {
     }
 
     private Optional<Price> activePrice(LocalDate businessDate) {
-        return prices.stream().filter(price -> price.stateAt(businessDate) == PriceState.ACTIVE).findFirst();
+        return PriceScheduleSnapshot.activePrice(prices, businessDate);
     }
 
     private Percent activeDiscount(LocalDate businessDate) {
-        return discounts.stream()
-                .filter(discount -> discount.stateAt(businessDate) == PriceState.ACTIVE)
-                .map(Discount::percent)
-                .findFirst()
-                .orElse(null);
+        return PriceScheduleSnapshot.activeDiscount(discounts, businessDate).map(Discount::percent).orElse(null);
     }
 
     PriceScheduleSnapshot toSnapshot() {
