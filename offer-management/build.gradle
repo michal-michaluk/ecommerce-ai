@@ -1,0 +1,227 @@
+plugins {
+    id "org.springframework.boot" version "4.1.0"
+    id "io.spring.dependency-management" version "1.1.7"
+    id "java"
+    id "com.google.cloud.tools.jib" version "3.5.4"
+    id "jacoco"
+    id "info.solidsoft.pitest" version "1.19.0"
+    id "com.github.spotbugs" version "6.5.9"
+}
+
+group = "com.example.offer"
+version = "1.0.0"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+    implementation "org.springframework.boot:spring-boot-starter-actuator"
+    implementation "org.springframework.boot:spring-boot-starter-data-jpa"
+    implementation "org.springframework.boot:spring-boot-starter-web"
+    implementation "org.springframework.boot:spring-boot-starter-validation"
+    implementation "org.springframework.kafka:spring-kafka"
+    implementation "org.springframework.boot:spring-boot-starter-oauth2-resource-server"
+    implementation "org.springframework.retry:spring-retry:2.0.13"
+    implementation "io.micrometer:micrometer-registry-prometheus"
+    runtimeOnly "org.postgresql:postgresql"
+    implementation "org.springframework.boot:spring-boot-starter-liquibase"
+
+
+    annotationProcessor "org.projectlombok:lombok:1.18.46"
+
+    //Tests
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation("org.junit.platform:junit-platform-launcher:6.1.2") {
+        because "Spring Boot 4.0.6 pins this to 1.14.2 which is incompatible with JUnit 6.0.3"
+    }
+    testImplementation "org.testcontainers:testcontainers:2.0.5"
+    testImplementation "org.testcontainers:testcontainers-kafka:2.0.5"
+    testImplementation "org.testcontainers:testcontainers-postgresql:2.0.5"
+    testImplementation "org.awaitility:awaitility"
+    testImplementation "au.com.dius.pact.consumer:junit5:4.7.3"
+    testImplementation "au.com.dius.pact.provider:junit5spring:4.7.3"
+    testImplementation "org.springframework.security:spring-security-test"
+    testImplementation "org.springframework.boot:spring-boot-starter-webflux"
+    testImplementation "com.github.dasniko:testcontainers-keycloak:4.3.1"
+    testImplementation "com.tngtech.archunit:archunit-junit5:1.4.2"
+
+    spotbugs "com.github.spotbugs:spotbugs:4.9.8"
+    spotbugs "com.h3xstream.findsecbugs:findsecbugs-plugin:1.14.0"
+}
+
+configurations {
+    compileOnly { extendsFrom annotationProcessor }
+    testCompileOnly { extendsFrom annotationProcessor }
+    testAnnotationProcessor { extendsFrom annotationProcessor }
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.15"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+pitest {
+    targetClasses = ["com.example.offer.*"]
+    pitestVersion = "1.25.4"
+    threads = 4
+    outputFormats = ["XML", "HTML"]
+    timestampedReports = false
+    junit5PluginVersion = "1.2.3"
+}
+
+spotbugs {
+    ignoreFailures = false
+    effort = "max"
+    reportLevel = "medium"
+    includeFilter = file("config/spotbugs/include.xml")
+    excludeFilter = file("config/spotbugs/exclude.xml")
+}
+
+spotbugsMain {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${buildDir}/reports/spotbugs/main.html")
+        }
+        sarif {
+            required = true
+            outputLocation = file("${buildDir}/reports/spotbugs/main.sarif")
+        }
+    }
+}
+
+spotbugsTest {
+    reports {
+        html {
+            required = true
+            outputLocation = file("${buildDir}/reports/spotbugs/test.html")
+        }
+    }
+}
+
+tasks.register("trivyScan", Exec) {
+    dependsOn build
+    description = "Run Trivy vulnerability scanner (requires Docker)"
+    group = "Security"
+    commandLine "docker", "run", "--rm",
+        "-v", "${projectDir}:/project",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock",
+        "aquasec/trivy:latest",
+        "filesystem",
+        "--scanners", "vuln,secret,misconfig",
+        "--severity", "HIGH,CRITICAL",
+        "--exit-code", "1",
+        "/project"
+}
+
+tasks.register("trivyScanImage", Exec) {
+    dependsOn jibDockerBuild
+    description = "Scan the built Docker image with Trivy"
+    group = "Security"
+    commandLine "docker", "run", "--rm",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock",
+        "aquasec/trivy:latest",
+        "image",
+        "--severity", "HIGH,CRITICAL",
+        "--exit-code", "1",
+        "offer-management:latest"
+}
+
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = 0.8
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
+
+
+compileJava {
+    options.incremental = true
+    options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+compileTestJava {
+    options.incremental = true
+    options.compilerArgs << "-parameters"
+    options.compilerArgs << "-Xlint:unchecked"
+}
+
+def otelAgentVersion = "2.17.0"
+def otelAgentDir = layout.buildDirectory.dir("otel")
+def otelAgentJar = otelAgentDir.map { it.file("opentelemetry-javaagent.jar") }
+
+tasks.register("downloadOtelAgent") {
+    outputs.file(otelAgentJar)
+    doLast {
+        def targetDir = otelAgentDir.get().asFile
+        targetDir.mkdirs()
+        def jar = otelAgentJar.get().asFile
+        if (!jar.exists()) {
+            def url = "https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${otelAgentVersion}/opentelemetry-javaagent.jar"
+            println "Downloading OTel Java agent v${otelAgentVersion}..."
+            new URL(url).withInputStream { input -> jar.withOutputStream { output -> input.transferTo(output) } }
+            println "Downloaded to ${jar}"
+        }
+    }
+}
+
+jib {
+    from {
+        image = "eclipse-temurin:25-jdk"
+    }
+    to {
+        image = "offer-management"
+        tags = ["latest"]
+    }
+    extraDirectories {
+        paths {
+            path {
+                from = otelAgentDir.get().asFile
+                into = "/app"
+            }
+        }
+    }
+    container {
+        mainClass = "com.example.offer.AppRunner"
+        ports = ["8080"]
+        jvmFlags = ["-XX:+UseZGC", "-XX:MaxRAMPercentage=75"]
+        environment = [
+            "SPRING_OUTPUT_ANSI_ENABLED": "never",
+            "JAVA_TOOL_OPTIONS": "-javaagent:/app/opentelemetry-javaagent.jar"
+        ]
+        creationTime = "USE_CURRENT_TIMESTAMP"
+    }
+}
+
+tasks.named("jib").configure { dependsOn "downloadOtelAgent" }
+tasks.named("jibDockerBuild").configure { dependsOn "downloadOtelAgent" }
+tasks.named("jibBuildTar").configure { dependsOn "downloadOtelAgent" }

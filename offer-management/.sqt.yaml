@@ -1,0 +1,56 @@
+version: 1
+
+# Cross-cutting rules for the whole reference implementation — both
+# `src/main/java` (which adds its own architecture rules) and `src/test/java`
+# (which adds its own test-shape rules). Anything declared here applies to
+# every Java file below `example/`, so it must read the same in production and
+# in tests.
+#
+# A check `id` must be unique across the whole cascade, hence no `test.` /
+# `prod.` variants of these three.
+
+checks:
+  # Logging goes through the logger (slf4j), never to the console; a test's
+  # evidence is its assertion, not stdout. File grain, so a call in a
+  # static/field initializer is caught too.
+  - id: no-system-out
+    language: Java
+    severity: error
+    message: code must not write to System.out / System.err — log it in production, assert it in tests
+    filter: { kind: program }
+    rule: { has: { stopBy: end, kind: field_access, regex: '^System[.](out|err)$' } }
+
+  # Blocking sleep is a smell everywhere: it pins a thread in production and
+  # makes a test slow and flaky. Use scheduling or a bounded wait.
+  - id: no-thread-sleep
+    language: Java
+    severity: error
+    message: code must not call Thread.sleep — use scheduling or a bounded wait
+    filter: { kind: program }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_invocation
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^sleep$' }
+          - has: { field: object, stopBy: end, kind: identifier, regex: '^Thread$' }
+
+  # A comment inside a type body is a decomposition signal: the block needs a
+  # name, not an explanation. Type grain (not method grain) so a commented-out
+  # static initializer is caught too. Javadoc lives outside the body, so it
+  # stays legal. Side effect: a `//` placed between members is flagged as well.
+  - id: no-inline-comments
+    language: Java
+    severity: warning
+    message: if code needs comments it needs decomposition and simplification instead
+    filter:
+      any:
+        - kind: class_declaration
+        - kind: record_declaration
+        - kind: enum_declaration
+        - kind: interface_declaration
+        - kind: annotation_type_declaration
+    rule:
+      any:
+        - has: { stopBy: end, kind: line_comment }
+        - has: { stopBy: end, kind: block_comment, not: { regex: '^/\*\*' } }

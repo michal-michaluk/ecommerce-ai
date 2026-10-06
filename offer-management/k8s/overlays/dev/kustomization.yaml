@@ -1,0 +1,26 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: offer-management-dev
+
+resources:
+  - ../../base
+
+namePrefix: dev-
+
+patches:
+  - path: deployment-patch.yaml
+
+configMapGenerator:
+  - name: offer-management
+    behavior: merge
+    literals:
+      - kafka-bootstrap-servers=localhost:9092
+      - spring-profile-active=dev
+
+secretGenerator:
+  - name: offer-management-db
+    literals:
+      - jdbc-url=jdbc:postgresql://localhost:5432/offer-management_dev
+      - username=dev_user
+      - password=dev_password

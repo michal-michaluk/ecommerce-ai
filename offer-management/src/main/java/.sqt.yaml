@@ -1,0 +1,725 @@
+version: 1
+
+# Classifications, kept in one file for now (no includes yet).
+# Every member predicate is scoped to the type's own body (`field: body` +
+# `stopBy: neighbor`), so a nested type's members never classify the outer type.
+utils:
+  # A member predicate: the type's own body declares an `id` / `*Id` field.
+  has.id:
+    has:
+      field: body
+      stopBy: neighbor
+      kind: class_body
+      has:
+        stopBy: neighbor
+        kind: field_declaration
+        has:
+          stopBy: end
+          kind: variable_declarator
+          has: { field: name, stopBy: end, kind: identifier, regex: '(^id$|Id$)' }
+
+  # A member predicate: the type's own body declares at least one mutable
+  # instance field (neither `final` nor `static`).
+  is.mutable:
+    has:
+      field: body
+      stopBy: neighbor
+      kind: class_body
+      has:
+        stopBy: neighbor
+        kind: field_declaration
+        not: { has: { stopBy: end, kind: modifiers, regex: '\b(final|static)\b' } }
+
+  # An ENTITY is a class with identity and mutable state. It may be nested —
+  # e.g. a part of an aggregate — so it is not restricted to top level. No check
+  # rides on it yet; it only classifies, so persistence rows (`*Entity`) are fine.
+  is.entity:
+    all:
+      - kind: class_declaration
+      - matches: has.id
+      - matches: is.mutable
+
+  # A class that collects domain events in a `List<*Event> events` field.
+  has.events:
+    has:
+      field: body
+      stopBy: neighbor
+      kind: class_body
+      has:
+        stopBy: neighbor
+        kind: field_declaration
+        all:
+          - has:
+              stopBy: end
+              kind: variable_declarator
+              has: { field: name, stopBy: end, kind: identifier, regex: '[Ee]vents$' }
+          - has:
+              field: type
+              stopBy: end
+              kind: generic_type
+              has: { stopBy: end, kind: type_identifier, regex: 'Event$' }
+
+  # A declaration at the file's top level — its immediate parent is the
+  # file-root node (`program`). The positive form of "not nested".
+  is.top-level:
+    inside: { stopBy: neighbor, kind: program }
+
+  # An AGGREGATE is a top-level entity that collects domain events.
+  is.aggregate:
+    all:
+      - matches: is.entity
+      - matches: is.top-level
+      - matches: has.events
+
+  # A VALUE OBJECT is a record, or a Lombok @Value class.
+  is.valueobject:
+    any:
+      - kind: record_declaration
+      - all:
+          - kind: class_declaration
+          - has: { stopBy: end, pattern: '@Value' }
+
+  # --- Shared visibility predicates ----------------------------------------
+  # `stopBy: neighbor` reads the type's / member's OWN modifiers (utils are
+  # exempt from the check-level `has: stopBy: end` rule), so a nested type or a
+  # called method never leaks into the outer type's verdict.
+
+  # The node's own modifiers carry `public`.
+  has.public-modifier:
+    has: { stopBy: neighbor, kind: modifiers, regex: '\bpublic\b' }
+
+  # The class itself is `public`.
+  is.public:
+    all:
+      - kind: class_declaration
+      - matches: has.public-modifier
+
+  # The type's own body declares any public member (field, method, constructor,
+  # nested type). Used where full encapsulation is required (aggregate, controller).
+  has.public-member:
+    has:
+      field: body
+      stopBy: neighbor
+      kind: class_body
+      has:
+        stopBy: neighbor
+        any:
+          - kind: field_declaration
+          - kind: method_declaration
+          - kind: constructor_declaration
+          - kind: class_declaration
+          - kind: interface_declaration
+          - kind: enum_declaration
+          - kind: record_declaration
+          - kind: annotation_type_declaration
+        has: { stopBy: neighbor, kind: modifiers, regex: '\bpublic\b' }
+
+  # The type's own body declares a public field. Used where methods must stay
+  # public (interface `@Override`, Spring listeners) but fields must not.
+  has.public-field:
+    has:
+      field: body
+      stopBy: neighbor
+      kind: class_body
+      has:
+        stopBy: neighbor
+        kind: field_declaration
+        has: { stopBy: neighbor, kind: modifiers, regex: '\bpublic\b' }
+
+  # --- Adapter classifications ---------------------------------------------
+
+  # An HTTP controller — a class carrying `@RestController`.
+  is.controller:
+    all:
+      - kind: class_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^RestController$' } }
+
+  # A persistence adapter — a class carrying `@Repository`.
+  is.repository:
+    all:
+      - kind: class_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^Repository$' } }
+
+  # A JPA entity — a class carrying `@Entity`.
+  is.jpa-entity:
+    all:
+      - kind: class_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^Entity$' } }
+
+  # A projection — a `@Component` class with at least one `@EventListener` method.
+  is.projection:
+    all:
+      - kind: class_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^Component$' } }
+      - has:
+          stopBy: end
+          kind: method_declaration
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^EventListener$' } }
+
+  # A controller-nested transport object (request/response payload). Like a value
+  # object, but scoped to a controller and required to be non-public.
+  is.controller-dto:
+    all:
+      - kind: record_declaration
+      - inside: { stopBy: end, matches: is.controller }
+
+  # A controller handler: a method in a controller's own body carrying a Spring
+  # mapping annotation (`*Mapping`).
+  is.handler:
+    all:
+      - kind: method_declaration
+      - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.controller } }
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: 'Mapping$' } }
+
+  # A handler's path string — positional (`@GetMapping("/x")`) or the value of a
+  # `path =` / `value =` pair. Never a `consumes`/`produces` media type.
+  is.path-literal:
+    all:
+      - kind: string_literal
+      - any:
+          - inside:
+              stopBy: neighbor
+              kind: annotation_argument_list
+              inside: { stopBy: neighbor, kind: annotation, has: { field: name, stopBy: end, kind: identifier, regex: 'Mapping$' } }
+          - inside:
+              stopBy: neighbor
+              kind: element_value_pair
+              has: { field: key, stopBy: end, kind: identifier, regex: '^(path|value)$' }
+
+  # A path written positionally (`@GetMapping("/x")`) rather than named (`path = "/x"`).
+  is.positional-path-literal:
+    all:
+      - kind: string_literal
+      - inside:
+          stopBy: neighbor
+          kind: annotation_argument_list
+          inside: { stopBy: neighbor, kind: annotation, has: { field: name, stopBy: end, kind: identifier, regex: 'Mapping$' } }
+
+metrics:
+  # An aggregate is small by contract; every other method gets the policy band.
+  # A metric entry filter is evaluated on the element node of the metric's own
+  # grain — a callable here — so the aggregate predicate is applied as an
+  # enclosing type (`inside`), not as the bare `matches: is.aggregate` (a class).
+  cyclomatic_complexity:
+    - filter:
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: end, matches: is.aggregate }
+      warn: 4
+      error: 5
+    - warn: 12
+      error: 15
+  method_lines:
+    - warn: 15
+      error: 25
+  # Parameter limits are global to every method and never apply to a constructor.
+  # `parameter_count` measures callables — a constructor is one — so the filter
+  # keeps constructors out.
+  parameter_count:
+    - filter: { kind: method_declaration }
+      error: 5
+
+checks:
+  # >3 primitive/String params. A metric counts every parameter, so the
+  # primitive-only subset is a check: `nthChild.ofRule` counts *matching* named
+  # siblings, so position 4 means a fourth parameter whose type is simple.
+  - id: simple-parameter-count
+    language: Java
+    severity: error
+    message: methods must not take more than 3 primitive/String parameters
+    rule:
+      all:
+        - kind: method_declaration
+        - has:
+            stopBy: end
+            all:
+              - kind: formal_parameter
+              - nthChild:
+                  position: 4
+                  ofRule:
+                    all:
+                      - kind: formal_parameter
+                      - has:
+                          field: type
+                          stopBy: end
+                          regex: '^(byte|short|int|long|char|float|double|boolean|Byte|Short|Integer|Long|Character|Float|Double|Boolean|String)$'
+                          not:
+                            inside: { stopBy: end, kind: generic_type }
+
+  # ==================== Shared: JPA entities ====================
+  # A JPA entity never escapes its repository/projection file.
+  - id: entity.nested
+    language: Java
+    severity: error
+    message: a JPA @Entity must be nested — never exposed at the top level
+    filter: { matches: is.jpa-entity }
+    rule: { matches: is.top-level }
+
+  # ==================== Domain: aggregate ====================
+  # domain-model.md
+  - id: aggregate.package-private
+    language: Java
+    severity: error
+    message: an aggregate must be package-private
+    filter: { matches: is.aggregate }
+    rule: { matches: is.public }
+
+  - id: aggregate.no-public-members
+    language: Java
+    severity: error
+    message: an aggregate must not expose public members
+    filter: { matches: is.aggregate }
+    rule: { matches: has.public-member }
+
+  - id: aggregate.static-factory-method
+    language: Java
+    severity: error
+    message: an aggregate must declare a static factory method returning its own type
+    filter: { matches: is.aggregate }
+    rule:
+      all:
+        - matches: is.aggregate
+        - has: { field: name, stopBy: end, pattern: $NAME }
+        - not:
+            has:
+              stopBy: end
+              all:
+                - kind: method_declaration
+                - has: { stopBy: end, kind: modifiers, regex: '\bstatic\b' }
+                - has: { field: type, stopBy: end, kind: type_identifier, pattern: $NAME }
+
+  # domain-model.md — "aggregate controls access to its internal state"; NOGO public fields.
+  # A non-final field must be `private` (final invariants may be package-private).
+  - id: aggregate.nonfinal-fields-private
+    language: Java
+    severity: error
+    message: an aggregate's non-final fields must be private
+    filter: { matches: is.aggregate }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: field_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.aggregate } }
+          - not: { has: { stopBy: end, kind: modifiers, regex: '\b(final|static)\b' } }
+          - not: { has: { stopBy: end, kind: modifiers, regex: '\bprivate\b' } }
+
+  # domain-model.md NOGO — "Do not add getters like getOwnership()".
+  - id: aggregate.no-getters
+    language: Java
+    severity: error
+    message: an aggregate must not declare getters
+    filter: { matches: is.aggregate }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.aggregate } }
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^get[A-Z]' }
+
+  # domain-model.md — all mutations go through named business methods, not setters.
+  - id: aggregate.no-setters
+    language: Java
+    severity: error
+    message: an aggregate must not declare setters
+    filter: { matches: is.aggregate }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.aggregate } }
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^set[A-Z]' }
+
+  # domain-model.md — "Every meaningful state change emits a DomainEvent".
+  # A method that mutates state (`this.x = …`) must also append to `events`.
+  # Delegating methods (no field assignment) are exempt; local assignments are ignored.
+  - id: aggregate.mutation-emits-event
+    language: Java
+    severity: error
+    message: an aggregate method that mutates state must emit a domain event
+    filter: { matches: is.aggregate }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.aggregate } }
+          - has:
+              stopBy: end
+              all:
+                - kind: assignment_expression
+                - has: { field: left, stopBy: end, kind: field_access }
+          - not:
+              has:
+                stopBy: end
+                all:
+                  - kind: method_invocation
+                  - has: { field: name, stopBy: end, kind: identifier, regex: '^add$' }
+                  - has: { field: object, stopBy: end, kind: identifier, regex: '[Ee]vents$' }
+
+  # ==================== Domain: value object ====================
+  # domain-model.md
+
+  # NOGO JPA annotations on a value object (map them in the adapter).
+  - id: vo.no-jpa-annotations
+    language: Java
+    severity: error
+    message: a value object must not carry JPA annotations
+    filter: { matches: is.valueobject }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - any: [ { kind: annotation }, { kind: marker_annotation } ]
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^(Entity|Table|Embeddable|Id|Column|GeneratedValue|Transient|MappedSuperclass|JoinColumn|ManyToOne|OneToMany|OneToOne|ManyToMany|ElementCollection)$' }
+
+  # NOGO mutable state / setters.
+  - id: vo.no-setters
+    language: Java
+    severity: error
+    message: a value object must not declare setters
+    filter: { matches: is.valueobject }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.valueobject } }
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^set[A-Z]' }
+
+  # NOGO plain/mutable fields. A record's state is its components (implicitly
+  # final), so its body may hold only static final constants.
+  - id: vo.record-fields-static-final
+    language: Java
+    severity: error
+    message: a value-object record body must declare only static final constants
+    filter: { matches: is.valueobject }
+    rule:
+      all:
+        - kind: record_declaration
+        - has:
+            stopBy: end
+            all:
+              - kind: field_declaration
+              - inside: { stopBy: neighbor, kind: class_body }
+              - any:
+                  - not: { has: { stopBy: end, kind: modifiers, regex: '\bstatic\b' } }
+                  - not: { has: { stopBy: end, kind: modifiers, regex: '\bfinal\b' } }
+
+  # "Use @Builder for objects with many optional fields".
+  - id: vo.builder-when-wide
+    language: Java
+    severity: hint
+    message: a wide value-object record (>=5 components) should declare @Builder
+    filter: { matches: is.valueobject }
+    rule:
+      all:
+        - kind: record_declaration
+        - has:
+            field: parameters
+            stopBy: end
+            kind: formal_parameter
+            nthChild: { position: 5, ofRule: { kind: formal_parameter } }
+        - not:
+            has:
+              stopBy: end
+              all:
+                - any: [ { kind: annotation }, { kind: marker_annotation } ]
+                - has: { field: name, stopBy: end, kind: identifier, regex: '^Builder$' }
+
+  # ==================== Controllers ====================
+  # adapter-http-command.md / adapter-http-query.md — thin, package-private,
+  # constructor-injected, never transactional.
+  - id: controller.package-private
+    language: Java
+    severity: error
+    message: a controller must be package-private
+    filter: { matches: is.controller }
+    rule: { matches: is.public }
+
+  - id: controller.no-public-members
+    language: Java
+    severity: error
+    message: a controller must not expose public members
+    filter: { matches: is.controller }
+    rule: { matches: has.public-member }
+
+  - id: controller.required-args-constructor
+    language: Java
+    severity: error
+    message: a controller must inject its collaborators via @RequiredArgsConstructor
+    filter: { matches: is.controller }
+    rule:
+      not:
+        has:
+          stopBy: end
+          any: [ { kind: annotation }, { kind: marker_annotation } ]
+          has: { field: name, stopBy: end, kind: identifier, regex: '^RequiredArgsConstructor$' }
+
+  - id: controller.no-transactional
+    language: Java
+    severity: error
+    message: a controller must not be transactional (put it on the projection/service)
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        any: [ { kind: annotation }, { kind: marker_annotation } ]
+        has: { field: name, stopBy: end, kind: identifier, regex: '^Transactional$' }
+
+  - id: controller.handlers-package-private
+    language: Java
+    severity: error
+    message: controller handler methods must be package-private
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.controller } }
+          - has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^(Get|Post|Put|Patch|Delete|Request)Mapping$' } }
+          - has: { stopBy: end, kind: modifiers, regex: '\b(public|protected|private)\b' }
+
+  # ==================== Repositories ====================
+  # adapter-persistence-document.md / adapter-persistence-event-sourcing.md —
+  # package-private adapters, nested JPA entities, events published on save.
+  # Methods stay public (the port interface), so only fields forbid `public`.
+  - id: repository.package-private
+    language: Java
+    severity: error
+    message: a repository adapter must be package-private
+    filter: { matches: is.repository }
+    rule: { matches: is.public }
+
+  - id: repository.no-public-fields
+    language: Java
+    severity: error
+    message: a repository adapter must not expose public fields
+    filter: { matches: is.repository }
+    rule: { matches: has.public-field }
+
+  - id: repository.publisher-publishes-on-save
+    language: Java
+    severity: error
+    message: a repository with an ApplicationEventPublisher must publish events in save()
+    filter:
+      all:
+        - matches: is.repository
+        - has: { stopBy: end, all: [ { kind: field_declaration }, { has: { field: type, stopBy: end, kind: type_identifier, regex: 'ApplicationEventPublisher$' } } ] }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^save$' }
+          - not:
+              has:
+                stopBy: end
+                all:
+                  - kind: method_invocation
+                  - has: { field: name, stopBy: end, kind: identifier, regex: '^publishEvent$' }
+
+  # ==================== Projections ====================
+  # adapter-projection.md — package-private, @Transactional, handlers listen,
+  # query methods read-only. Methods stay public (listeners / port), so only
+  # fields forbid `public`.
+  - id: projection.package-private
+    language: Java
+    severity: error
+    message: a projection must be package-private
+    filter: { matches: is.projection }
+    rule: { matches: is.public }
+
+  - id: projection.no-public-fields
+    language: Java
+    severity: error
+    message: a projection must not expose public fields
+    filter: { matches: is.projection }
+    rule: { matches: has.public-field }
+
+  - id: projection.class-transactional
+    language: Java
+    severity: error
+    message: a projection must be @Transactional (its handlers run in the publisher's transaction)
+    filter: { matches: is.projection }
+    rule:
+      not:
+        has:
+          stopBy: end
+          any: [ { kind: annotation }, { kind: marker_annotation } ]
+          has: { field: name, stopBy: end, kind: identifier, regex: '^Transactional$' }
+
+  - id: projection.handlers-listen
+    language: Java
+    severity: error
+    message: a projection's handle* method must be annotated @EventListener
+    filter: { matches: is.projection }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.projection } }
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^handle' }
+          - not:
+              has:
+                stopBy: end
+                any: [ { kind: annotation }, { kind: marker_annotation } ]
+                has: { field: name, stopBy: end, kind: identifier, regex: '^EventListener$' }
+
+  - id: projection.find-methods-readonly
+    language: Java
+    severity: error
+    message: a projection's find* query method must be @Transactional(readOnly = true)
+    filter: { matches: is.projection }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.projection } }
+          - has: { field: name, stopBy: end, kind: identifier, regex: '^find' }
+          - not:
+              has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], regex: '.*readOnly\s*=\s*true.*' }
+
+  # ==================== API surface ====================
+  # adapter-http-command.md / adapter-http-query.md + docs/index.md — consistent
+  # handler shape across every controller.
+  - id: api.mapping-declares-path
+    language: Java
+    severity: error
+    message: a handler mapping must declare an explicit path
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - matches: is.handler
+          - not: { has: { stopBy: end, matches: is.path-literal } }
+
+  - id: api.path-leading-slash
+    language: Java
+    severity: error
+    message: a handler path must start with '/'
+    filter: { matches: is.controller }
+    rule:
+      has: { stopBy: end, matches: is.handler, has: { stopBy: end, matches: is.path-literal, not: { regex: '^"/' } } }
+
+  - id: api.path-kebab-case
+    language: Java
+    severity: warning
+    message: a handler path must be lowercase-kebab (no PascalCase/camelCase segments)
+    filter: { matches: is.controller }
+    rule:
+      has: { stopBy: end, matches: is.handler, has: { stopBy: end, matches: is.path-literal, not: { regex: '^"/[a-z0-9/_.-]*([{][^}]*[}][a-z0-9/_.-]*)*"$' } } }
+
+  - id: api.helpers-private
+    language: Java
+    severity: warning
+    message: a controller's non-handler methods must be private
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: method_declaration
+          - inside: { stopBy: neighbor, kind: class_body, inside: { stopBy: neighbor, matches: is.controller } }
+          - not: { has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: 'Mapping$' } } }
+          - not: { has: { stopBy: end, kind: modifiers, regex: '\bprivate\b' } }
+
+  - id: api.no-entity-in-signature
+    language: Java
+    severity: warning
+    message: a controller handler must not reference a JPA *Entity type
+    filter: { matches: is.controller }
+    rule:
+      has: { stopBy: end, matches: is.handler, has: { stopBy: end, kind: type_identifier, regex: 'Entity$' } }
+
+  - id: api.request-body-valid
+    language: Java
+    severity: error
+    message: a @RequestBody parameter must be @Valid
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - matches: is.handler
+          - has:
+              stopBy: end
+              all:
+                - kind: formal_parameter
+                - has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^RequestBody$' } }
+                - not: { has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^(Valid|Validated)$' } } }
+
+  - id: api.unsafe-method-has-body
+    language: Java
+    severity: error
+    message: a POST/PUT/PATCH handler must take a @RequestBody
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - matches: is.handler
+          - has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^(Post|Put|Patch)Mapping$' } }
+          - not: { has: { stopBy: end, kind: formal_parameter, has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^RequestBody$' } } } }
+
+  - id: api.get-returns-value
+    language: Java
+    severity: error
+    message: a GET handler must return a value, not void
+    filter: { matches: is.controller }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - matches: is.handler
+          - has: { stopBy: end, any: [ { kind: annotation }, { kind: marker_annotation } ], has: { field: name, stopBy: end, kind: identifier, regex: '^GetMapping$' } }
+          - has: { field: type, stopBy: end, kind: void_type }
+
+  - id: api.mapping-named-path
+    language: Java
+    severity: hint
+    message: 'declare the path as a named attribute: @*Mapping(path = "…")'
+    filter: { matches: is.controller }
+    rule:
+      has: { stopBy: end, matches: is.handler, has: { stopBy: end, matches: is.positional-path-literal } }
+
+  # Exposes resources, not actions: a path segment must not start with an RPC verb.
+  # `search`/`find`/`list` are treated as resource nouns, not verbs.
+  - id: api.path-no-rpc-verb
+    language: Java
+    severity: hint
+    message: use a resource-based path (noun) and express the action with the HTTP method — GET /devices, not GET /getDevices
+    filter: { matches: is.controller }
+    rule:
+      has: { stopBy: end, matches: is.handler, has: { stopBy: end, matches: is.path-literal, regex: '(?i)(^|/)(get|create|update|delete|remove|add|fetch|save|process|handle|execute|compute|calculate)([a-z/]|$)' } }
+
+  # ==================== Controller DTOs ====================
+  # Transport objects nested in a controller stay non-public; their shape rules
+  # are the value-object rules (a controller DTO is a record).
+  - id: controller-dto.non-public
+    language: Java
+    severity: error
+    message: a controller-nested transport record must be non-public
+    filter: { matches: is.controller-dto }
+    rule: { matches: has.public-modifier }

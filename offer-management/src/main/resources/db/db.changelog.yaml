@@ -1,0 +1,27 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0001-features-configuration
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: features_configuration
+            columns:
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: configuration
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0002-template-placeholder
+      author: template
+      changes:
+        - tagDatabase:
+            tag: template-generated
