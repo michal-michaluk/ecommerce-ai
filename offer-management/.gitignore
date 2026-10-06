@@ -123,3 +123,6 @@ logs/
 ## and so cargo-generate does not substitute inside it; the suffix is stripped on generation
 !.sqt.yaml
 !.sqt.yaml.liquid
+
+# The Gradle wrapper jar is required to run ./gradlew from a fresh clone.
+!gradle/wrapper/gradle-wrapper.jar
