@@ -653,4 +653,5 @@ Found while planning; each is absorbed by a node, not silently worked around:
 
 - Spec ticket: [michal-michaluk/ecommerce-ai#2](https://github.com/michal-michaluk/ecommerce-ai/issues/2)
 - Plan ticket: [michal-michaluk/ecommerce-ai#8](https://github.com/michal-michaluk/ecommerce-ai/issues/8)
+- Impl: sub-tasks #17–#43 (see the report for the per-node table), report [#43](https://github.com/michal-michaluk/ecommerce-ai/issues/43), PR [#44](https://github.com/michal-michaluk/ecommerce-ai/pull/44)
 
