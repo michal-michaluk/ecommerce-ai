@@ -282,11 +282,13 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
 | A17 | Container runtime everywhere | every container operation is **podman**: trivy (`podman run`), image build (`jibBuildTar` + `podman load`), cluster (`podman run`) |
 | A18 | Test + coverage policy (operator) | node gates run `test`, never `build -x test`; `jacocoTestCoverageVerification` is a **separate, later** gate (after the domain is implemented) scoped to the `draft` / `pricing` / `offer` contexts; `tools/` needs no coverage. The template's unscoped global 0.8 rule is replaced by scoped rules (scoping, not lowering) |
 | A19 | Shared kernel package (operator) | `Identity` / `Audit` live in `com.example.offer.auth`, **not** `tools` (overrides E04 §1's "shared kernel in `tools/`"; `.domainModels("..tools..")` does not hold) |
+| A20 | ArchUnit policy (operator) | **no `onionArchitecture()`** — the generic `ArchitectureTest` is removed (commit `f4ebb7e`). Cross-context isolation is enforced per context via `ArchitectureDescription` / `ArchitectureOf{Context}Test` (blueprint `arch-unit.md`), which every context node adds |
+| A21 | Coverage scope (operator) | coverage is calculated on the **domain contexts** (`draft`, `pricing`, `offer`) — never on `tools` — and therefore only becomes meaningful once they exist; the gate runs after phase 4 |
 
 ### Plan
 
 1. Scaffold and shared foundations
- - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a, A19) , error-contract (E02 "Error codes") , build-gates (A17, A18) , hurl-fixtures (E02 F1)
+ - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a, A19) , error-contract (E02 "Error codes") , hurl-fixtures (E02 F1)
 2. Draft context
  - draft-domain (E04 §4/§6/§7, E07 D3/D5) -> draft-persistence (A15, `adapter-persistence-document.md`)
 3. Pricing context
@@ -294,19 +296,20 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
 4. Offer context and decisions
  - decisions-policy (E05, E07) , offer-domain (E04 §2/§3/§5/§9/§9a/§10, RULE-70)
  - offer-domain -> offer-persistence (A15) , offer-domain -> product-mediator (E04 RULE-30/50/51, `adapter-mediator.md`)
- - (draft + pricing + offer domains complete) -> coverage-gate (A18)
-5. Read models
+5. Build gates and coverage — after the domain exists (operator decision)
+ - build-gates (A17, A18) -> coverage-gate (A18)
+6. Read models
  - catalog-projection (E02 states/`completeness`, E04 §9a/§10, `adapter-projection.md`) -> catalog-http
-6. HTTP API
- - draft-http , offer-http , pricing-http (E02) — depend on 4–5
-7. Publishing to browsing offer
+7. HTTP API
+ - draft-http , offer-http , pricing-http (E02) — depend on 4–6
+8. Publishing to browsing offer
  - outbox-relay (E03, A11) -> pricing-lifecycle-scheduler (E08 T2, A10)
-8. Security and contracts
+9. Security and contracts
  - security-roles (E02 "Auth", `security.md`)
  - security-roles -> deploy-k3s (A14, A16, A17) -> hurl-contract-e2e (E02, I2/I3) , integration-e2e (E03, I6)
-9. Prove of done
+10. Prove of done
  - prove-dod (I1–I7)
-10. Evidence
+11. Evidence
  - demo-recording (I7) , review-branch (whole feature branch)
 
 ---
@@ -329,11 +332,11 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
 - **Goal:** add the shared-kernel types and the single clock zone.
 - **Executor:** general
 - **Docs:** `context-boundaries.md`, `arch-unit.md`; E04 §1/§11a (RULE-60, RULE-62, RULE-69), A9, A19
-- **IN / OUT:** IN: generated tree; OUT: `auth/Identity.java`, `auth/Audit.java` (in `com.example.offer.auth`, **not** `tools` — A19), `AppConfiguration.java` (`BUSINESS_ZONE` + `Clock` bean), `ArchitectureTest.java` (onion with `auth` as domain models; `tools`/`mediators` as adapters), `src/test/.../auth/{IdentityTest,AuditTest}.java`
+- **IN / OUT:** IN: generated tree; OUT: `auth/Identity.java`, `auth/Audit.java` (in `com.example.offer.auth`, **not** `tools` — A19), `AppConfiguration.java` (`BUSINESS_ZONE` + `Clock` bean), `src/test/.../auth/{IdentityTest,AuditTest}.java`
 - **checks:**
   - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*Architecture*' --no-daemon`
-- **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation), that they live in `com.example.offer.auth` and not `tools`, and that the `Clock` bean is the single pinned-zone business clock. Reject any ArchUnit weakening used to force green. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation), that they live in `com.example.offer.auth` and not `tools`, and that the `Clock` bean is the single pinned-zone business clock. Report deviations. Do not edit files — report only.
 
 #### build-gates
 - **Goal:** make the generated build podman-only and scope the coverage gate (A17, A18).
