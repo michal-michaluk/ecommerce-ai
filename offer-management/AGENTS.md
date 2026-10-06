@@ -4,3 +4,11 @@
 **Architecture:** Vertical slices — bounded contexts as sub-packages
 
 Generated from the `microservice-java-spring` blueprint.
+
+## Build toolchain
+
+- **podman only** (no docker daemon): `trivyScan`/`trivyScanImage` run via `podman run`; the image is
+  built with `jibBuildTar` (OCI tar at `build/jib-image.tar`) and loaded with `podmanLoad`.
+- `jacocoTestCoverageVerification` is scoped to the domain contexts (`draft`, `pricing`, `offer`);
+  `tools`, `auth` and the framework wiring are excluded. Threshold: `INSTRUCTION` covered ratio 0.8.
+
