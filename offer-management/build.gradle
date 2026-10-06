@@ -235,6 +235,12 @@ tasks.register("downloadOtelAgent") {
 jib {
     from {
         image = "eclipse-temurin:25-jdk"
+        platforms {
+            platform {
+                architecture = ["aarch64", "arm64"].contains(System.getProperty("os.arch")) ? "arm64" : "amd64"
+                os = "linux"
+            }
+        }
     }
     to {
         image = "offer-management"

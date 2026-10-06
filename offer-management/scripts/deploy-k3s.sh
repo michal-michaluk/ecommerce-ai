@@ -104,12 +104,20 @@ wait_for_cluster() {
     log "waiting for the k3s API"
     for _ in $(seq 1 90); do
         if kube get --raw='/readyz' >/dev/null 2>&1; then
+            break
+        fi
+        sleep 2
+    done
+    kube get --raw='/readyz' >/dev/null 2>&1 || die "the k3s API did not become ready; inspect 'podman logs ${CLUSTER_NAME}'"
+    log "waiting for the node to register and become Ready"
+    for _ in $(seq 1 90); do
+        if [[ -n "$(kube get nodes -o name 2>/dev/null)" ]]; then
             kube wait --for=condition=Ready node --all --timeout=120s
             return
         fi
         sleep 2
     done
-    die "the k3s API did not become ready; inspect 'podman logs ${CLUSTER_NAME}'"
+    die "the k3s node did not register; inspect 'podman logs ${CLUSTER_NAME}'"
 }
 
 create_namespaces() {
@@ -148,6 +156,10 @@ build_and_import_image() {
     podman load -i "${ROOT_DIR}/build/jib-image.tar" >/dev/null
     log "importing ${APP_IMAGE} into the k3s containerd"
     podman save "${APP_IMAGE}" | podman exec -i "${CLUSTER_NAME}" ctr -n k8s.io images import -
+    # kubelet resolves the unqualified deployment reference to docker.io/library/...;
+    # the podman load/save round-trip names it localhost/..., so bridge the two.
+    podman exec "${CLUSTER_NAME}" ctr -n k8s.io images tag \
+        "localhost/${APP_IMAGE}" "docker.io/library/${APP_IMAGE}" >/dev/null 2>&1 || true
 }
 
 apply_manifests() {

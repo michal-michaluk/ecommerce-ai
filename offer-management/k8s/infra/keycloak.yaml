@@ -128,7 +128,6 @@ spec:
             capabilities:
               drop:
                 - ALL
-            readOnlyRootFilesystem: true
             seccompProfile:
               type: RuntimeDefault
           args:
@@ -141,6 +140,8 @@ spec:
               value: admin
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               value: admin
+            - name: KC_HOSTNAME
+              value: "http://offer-management-keycloak:8080"
             - name: KC_HOSTNAME_STRICT
               value: "false"
             - name: KC_HTTP_ENABLED
