@@ -42,7 +42,8 @@ class PriceScheduleDocumentWithHistoryRepository implements PriceScheduleReposit
     public List<PriceSchedule> all() {
         return StreamSupport.stream(documents.findAll().spliterator(), false)
                 .map(PriceScheduleDocumentEntity::getPriceSchedule)
-                .map(PriceSchedule::restore)
+                .map(snapshot -> new PriceSchedule(snapshot.productId(), new ArrayList<>(),
+                        snapshot.prices(), snapshot.discounts()))
                 .toList();
     }
 
