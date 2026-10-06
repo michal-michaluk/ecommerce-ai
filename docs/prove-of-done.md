@@ -42,10 +42,12 @@ Every row below is **observed output**, not expectation. Nothing was weakened to
 
   source: `offer-management/src/test/java/com/example/offer/draft/DraftControllerTest.java:154` —
   `upload(productId, "%PDF-1.7".getBytes(), "scan.pdf", "application/pdf")`.
+- **RESOLVED:** `String.getBytes()` now passes `StandardCharsets.UTF_8`
+  (`DraftControllerTest.java:154`), and `./gradlew clean build` succeeds with `:spotbugsTest`,
+  `:spotbugsMain` and `:jacocoTestCoverageVerification` all green (verified on HEAD, commit `3e9ce7c`).
 - **Container starts (same row's second facet):** k3s pod `offer-management-… 1/1 Running`;
   `curl http://localhost:8080/actuator/health` → `{"groups":["liveness","readiness"],"status":"UP"}`.
-- **Result: FAIL.** The spec's `./gradlew build` gate expectation ("container starts, arch tests included")
-  is not met: the build is red on `:spotbugsTest`. Tests and ArchUnit gates inside it are green (see I5).
+- **Result: PASS** (after the fix above; the initial run was FAIL).
 
 ## I2 — Contract (41 pairs, 25 `2xx` / 16 `4xx`)
 
