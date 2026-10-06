@@ -1,0 +1,38 @@
+{
+  "title": "offer-management — implementation increment (scenarios 1–7, DoD I1–I7)",
+  "durationSec": 142.84,
+  "chapters": [
+    {
+      "title": "Intro",
+      "t": 0
+    },
+    {
+      "title": "1. Artifact — the service in the cluster",
+      "t": 10.09
+    },
+    {
+      "title": "2. Contract — the 22-endpoint API exercised",
+      "t": 20.79
+    },
+    {
+      "title": "3. Failure — publish with no price",
+      "t": 39.3
+    },
+    {
+      "title": "4. Gate — architecture and tests green",
+      "t": 63.27
+    },
+    {
+      "title": "5. Integration — event reaches the consumer",
+      "t": 77.63
+    },
+    {
+      "title": "6. Admin screens — Storybook prototype",
+      "t": 101.04
+    },
+    {
+      "title": "7. Value — I7 has no baseline",
+      "t": 129.97
+    }
+  ]
+}

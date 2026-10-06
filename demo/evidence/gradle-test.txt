@@ -1,0 +1,10 @@
+$ cd offer-management && ./gradlew test --no-daemon --rerun-tasks
+> Task :compileJava
+> Task :processResources
+> Task :classes
+> Task :compileTestJava
+> Task :processTestResources
+> Task :testClasses
+> Task :test
+> Task :jacocoTestReport
+BUILD SUCCESSFUL in 36s

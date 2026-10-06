@@ -1,0 +1,27 @@
+$ bash offer-management/e2e/run-e2e.sh
+error: Assert status code
+   --> /Users/michal/workspace/ai-craft/ecommerce-ai/offer-management/e2e/offer-management.hurl:250:6
+    |
+    | POST {{BASE_URL}}/review-requests/{{review_request_id}}/rejection
+    | ...
+250 | HTTP 200
+    |      ^^^ actual value is <409>
+    |
+
+error: Assert status code
+   --> /Users/michal/workspace/ai-craft/ecommerce-ai/offer-management/e2e/offer-management.hurl:324:6
+    |
+    | POST {{BASE_URL}}/products/{{product_id}}/publications
+    | ...
+324 | HTTP 201
+    |      ^^^ actual value is <409>
+    |
+
+Failure /Users/michal/workspace/ai-craft/ecommerce-ai/offer-management/e2e/offer-management.hurl (41 request(s) in 2001 ms)
+--------------------------------------------------------------------------------
+Executed files:    1
+Executed requests: 41 (20.4/s)
+Succeeded files:   0 (0.0%)
+Failed files:      1 (100.0%)
+Duration:          2005 ms (0h:0m:2s:5ms)
+

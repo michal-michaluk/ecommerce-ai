@@ -1,0 +1,8 @@
+$ (cd .storybook && NODE_PATH=/opt/homebrew/lib/node_modules/@playwright/cli/node_modules node ./verify-storybook.cjs http://localhost:6006)
+
+📖 Quality gate — http://localhost:6006
+
+📊 STORIES: 9 passed, 0 failed
+📊 FLOWS:   4 passed, 0 failed
+
+✅ QUALITY GATE PASSED

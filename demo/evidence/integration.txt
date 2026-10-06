@@ -1,0 +1,10 @@
+$ bash offer-management/e2e/run-integration.sh
+  read model after publish: {"productId": "p-43ea8709-896d-4a45-a8e3-b16efc31d987", "title": "Kosiarka r\u0119czna 340 (I6)", "version": "v1", "availableFrom": null, "price": null, "discountPercent": null, "present": true, "lastEvent": "ProductVersionPublishedToOffer_v1", "events": 1}
+[i6] PASS  ProductVersionPublishedToOffer reached the consumer; present=true, version=v1
+  read model after price activation: {"productId": "p-43ea8709-896d-4a45-a8e3-b16efc31d987", "title": "Kosiarka r\u0119czna 340 (I6)", "version": "v1", "availableFrom": null, "price": {"value": "259.00", "currency": "PLN"}, "discountPercent": "10", "present": true, "lastEvent": "ProductPricesChanged_v1", "events": 3}
+[i6] PASS  ProductPricesChanged reached the consumer; price={"productId": "p-43ea8709-896d-4a45-a8e3-b16efc31d987", "title": "Kosiarka r\u0119czna 340 (I6)", "version": "v1", "availableFrom": null, "price": {"value": "259.00", "currency": "PLN"}, "discountPercent": "10", "present": true, "lastEvent": "ProductPricesChanged_v1", "events": 3}
+  read model after removal: {"productId": "p-43ea8709-896d-4a45-a8e3-b16efc31d987", "title": "Kosiarka r\u0119czna 340 (I6)", "version": "v1", "availableFrom": null, "price": {"value": "259.00", "currency": "PLN"}, "discountPercent": "10", "present": false, "lastEvent": "ProductRemovedFromOffer_v1", "events": 4}
+[i6] PASS  ProductRemovedFromOffer reached the consumer; present=false
+[i6] PASS  no private event crossed the boundary (topic types are a subset of the three)
+[i6] PASS  all three boundary event types were observed on topic browsing-offer
+[i6] 5 passed, 0 failed
