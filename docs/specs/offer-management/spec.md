@@ -243,7 +243,7 @@ Cannot execute yet — no application code exists (§6). Rows are **moved**, nev
 |---|---|
 | Build | Gradle 9.5.1 wrapper (scaffold `microservice-java-spring`), Java 25 toolchain |
 | Test | JUnit 5 + AssertJ · ArchUnit 1.4.2 · Testcontainers 2.0.5 (PostgreSQL, Kafka, Keycloak) · Pact 4.7.3 |
-| Static | SpotBugs 4.9.8 + findsecbugs · PIT 1.25.4 · JaCoCo 0.8.15 (`guardrail_mode=strict` → coverage 0.8, SpotBugs fail-on-finding) |
+| Static | SpotBugs 4.9.8 + findsecbugs · PIT 1.25.4 · JaCoCo 0.8.15 (`guardrail_mode=strict`) |
 | Security scan | Trivy (`trivyScan`, `trivyScanImage`) |
 | e2e | hurl (blueprint `e2e/`, pattern `example/e2e/devices.hurl`) |
 | Runtime | **podman 6.1.0** only — no docker daemon (`docker` on PATH is a podman shim); k3d is out |
@@ -255,7 +255,9 @@ Cannot execute yet — no application code exists (§6). Rows are **moved**, nev
 | Architecture docs | `docs/arch/microservice-java-spring/` — `index.md` is the mandatory workflow |
 
 Project directory `offer-management/` (A1); package root `com.example.offer`.
-G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTestReport spotbugsMain trivyScan pitest jibBuildTar` (trivy/jib adapted to podman in `podman-toolchain`).
+G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuildTar` → `./gradlew jacocoTestCoverageVerification` (trivy/jib adapted to podman in `build-gates`).
+
+**Gate policy (operator decision, A18):** every node gate runs the **tests** (`./gradlew test … --no-daemon`) — never `./gradlew build -x test` (that excludes the `test` task, so JaCoCo verification is SKIPPED and ArchUnit — which runs inside `test` — never executes: a false green, which is exactly how the broken `ArchitectureTest` slipped past `scaffold-service`). Coverage is **not** a per-node gate: `jacocoTestCoverageVerification` runs as its own gate once the domain is implemented, scoped to `draft` / `pricing` / `offer`. `tools/` and the framework wiring need no coverage.
 
 ### Clarification Decisions (A1–A13 assumptions; A14–A17 operator decisions)
 
@@ -278,11 +280,13 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 | A15 | Persistence style (operator) | **PostgreSQL + document-with-history** for every aggregate repository (JSONB snapshot + separate events table, `@Version` optimistic lock, events published after save) per `adapter-persistence-document.md`; read models via `adapter-projection.md` |
 | A16 | Postgres in-cluster | no Postgres manifest ships — deploy **bitnami/postgresql via Helm** with the service name the overlay expects |
 | A17 | Container runtime everywhere | every container operation is **podman**: trivy (`podman run`), image build (`jibBuildTar` + `podman load`), cluster (`podman run`) |
+| A18 | Test + coverage policy (operator) | node gates run `test`, never `build -x test`; `jacocoTestCoverageVerification` is a **separate, later** gate (after the domain is implemented) scoped to the `draft` / `pricing` / `offer` contexts; `tools/` needs no coverage. The template's unscoped global 0.8 rule is replaced by scoped rules (scoping, not lowering) |
+| A19 | Shared kernel package (operator) | `Identity` / `Audit` live in `com.example.offer.auth`, **not** `tools` (overrides E04 §1's "shared kernel in `tools/`"; `.domainModels("..tools..")` does not hold) |
 
 ### Plan
 
 1. Scaffold and shared foundations
- - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a) , error-contract (E02 "Error codes") , podman-toolchain (A17) , hurl-fixtures (E02 F1)
+ - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a, A19) , error-contract (E02 "Error codes") , build-gates (A17, A18) , hurl-fixtures (E02 F1)
 2. Draft context
  - draft-domain (E04 §4/§6/§7, E07 D3/D5) -> draft-persistence (A15, `adapter-persistence-document.md`)
 3. Pricing context
@@ -290,6 +294,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 4. Offer context and decisions
  - decisions-policy (E05, E07) , offer-domain (E04 §2/§3/§5/§9/§9a/§10, RULE-70)
  - offer-domain -> offer-persistence (A15) , offer-domain -> product-mediator (E04 RULE-30/50/51, `adapter-mediator.md`)
+ - (draft + pricing + offer domains complete) -> coverage-gate (A18)
 5. Read models
  - catalog-projection (E02 states/`completeness`, E04 §9a/§10, `adapter-projection.md`) -> catalog-http
 6. HTTP API
@@ -314,7 +319,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** `docs/arch/microservice-java-spring/index.md`, `adding-a-bounded-context.md`, `code-structure.md`; §6; A1/A3/A13
 - **IN / OUT:** IN: blueprint `microservice-java-spring`; OUT: `offer-management/**` (incl. `k8s/base`, `k8s/infra`, `k8s/overlays/k3d` — renamed to `k3s` by `deploy-k3s`), baseline commit on `feat/offer-management` containing `docs/`, `.agents/`, `.storybook/`, `prototypes/`, `.gitignore`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `test -f offer-management/src/main/java/com/example/offer/AppRunner.java`
   - `test -f offer-management/k8s/overlays/k3d/kustomization.yaml`
   - `git diff --exit-code`
@@ -326,20 +331,20 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** `context-boundaries.md`, `arch-unit.md`; E04 §1/§11a (RULE-60, RULE-62, RULE-69), A9
 - **IN / OUT:** IN: generated `tools/`; OUT: `tools/Identity.java`, `tools/Audit.java`, `AppConfiguration.java` (Clock zone), `src/test/.../ArchitectureDescription.java` + per-context exposure lists
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*Architecture*' --no-daemon`
 - **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation) and that `ArchitectureDescription` exposure lists were updated for the new shared-kernel types. Report deviations. Do not edit files — report only.
 
-#### podman-toolchain
-- **Goal:** make the generated build work on podman-only hosts, no docker (A17).
+#### build-gates
+- **Goal:** make the generated build podman-only and scope the coverage gate (A17, A18).
 - **Executor:** general
-- **Docs:** blueprint `template/build.gradle`, `docs/arch/microservice-java-spring/tech-update.md`; A17
-- **IN / OUT:** IN: `scaffold-service`; OUT: `offer-management/build.gradle` (image task `jibBuildTar`, `trivyScan`/`trivyScanImage` → `podman run`, gate task renamed), `offer-management/AGENTS.md` note
+- **Docs:** blueprint `template/build.gradle`, `docs/arch/microservice-java-spring/tech-update.md`; A17/A18
+- **IN / OUT:** IN: `scaffold-service`; OUT: `offer-management/build.gradle` (image task `jibBuildTar`, `trivyScan`/`trivyScanImage` → `podman run`, `jacocoTestCoverageVerification` scoped to `com.example.offer.{draft,pricing,offer}` — `tools`/framework excluded), `offer-management/AGENTS.md` note
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew jibBuildTar --no-daemon`
   - `grep -q podman offer-management/build.gradle`
-- **review_prompt:** Check no remaining `docker` invocation in `build.gradle`, the OCI tar is produced by `jibBuildTar`, trivy runs via `podman run`, and the guardrail-mode coverage/SpotBugs settings are unweakened. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check no remaining `docker` invocation in `build.gradle`, the OCI tar is produced by `jibBuildTar`, trivy runs via `podman run`, and the guardrail settings are not weakened — coverage is **scoped** to the draft/pricing/offer contexts (and `tools` excluded), not lowered. Confirm the scoping is expressed as includes/excludes, not by editing a threshold down. Report deviations with file:line. Do not edit files — report only.
 
 #### error-contract
 - **Goal:** one exception hierarchy + advice mapping every E02 error code to its status and body (`code`, `message`, `details.fields[]`, `details.blocking[]`).
@@ -347,7 +352,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E02 "Error codes"; `adapter-http-command.md`, `security.md` (`server.error.include-message: never`)
 - **IN / OUT:** IN: generated web config; OUT: `tools/ApiError*.java` + advice; no controller changes
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ApiError*' --no-daemon`
 - **review_prompt:** Check the mapping against E02 "Error codes": every code present with its exact status, `VALIDATION_FAILED` names offending fields, `PUBLICATION_BLOCKED` carries `blocking[]`, no internal detail leaks. Report deviations. Do not edit files — report only.
 
@@ -366,7 +371,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E04 §4/§6/§7 (RULE-1..21, RULE-60/61); E07 D3/D5; `domain-model.md`, `policy.md`, `ports.md`, `testing.md`
 - **IN / OUT:** IN: `shared-kernel`, `error-contract`; OUT: `draft/` — `DescriptionDraft.java`, `Title`, `Description`, `DraftAttributes`, `Photo`, `DraftState`, `ReviewRequest`, `DraftSnapshot`, `UpdateDraft`, `DomainEvent` (7 records), `PhotoFormatPolicy`, `DraftRepository.java`, `DraftService.java`; `src/test/.../draft/**`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.draft.*' --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ArchitectureOfDraftContextTest' --no-daemon`
 - **review_prompt:** Check the `draft` context against E04 §4/§6/§7: package-private aggregate with no getters, every invariant a named method, one event per state change carrying `Audit`, idempotent no-ops emit nothing (RULE-61), D3 (review with missing items allowed) and D5 (reviewer ≠ author) enforced inside the aggregate, photo policy per Q21. Report deviations. Do not edit files — report only.
@@ -386,7 +391,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E04 §8 (RULE-22..28, RULE-68); E06 (RULE-37..47 + 8 scenario rows); E08 (state table + RULE-26..28, RULE-64..67); `policy.md`, `testing.md`
 - **IN / OUT:** IN: `shared-kernel`, `error-contract`; OUT: `pricing/` — `Money`, `Percent`, `DateRange`, `PriceState`, `Price`, `Discount`, `EffectivePrice`, `PriceSchedule.java`, `DomainEvent.java`, `PriceScheduleRepository.java`, `PricingService.java`; `src/test/.../pricing/**`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.pricing.*' --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ArchitectureOfPricingContextTest' --no-daemon`
 - **review_prompt:** Check against E06's 8-row and E08's 6-row scenario tables row by row, plus RULE-25 (no overlap → `PRICE_OVERLAP`), RULE-26 (editability), RULE-38 (`validFrom` inclusive / `validTo` exclusive), RULE-45..47 (currency carry, one rounding, `percent` in (0,100)). Report every uncovered row. Do not edit files — report only.
@@ -406,7 +411,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E04 §2/§3/§5/§9/§9a/§10 (RULE-1..4, RULE-9..13, RULE-29..40, RULE-70); `domain-model.md`, `adapter-mediator.md`
 - **IN / OUT:** IN: `draft-domain`, `pricing-domain`; OUT: `offer/` — `DescriptionVersion`, `Publication`, `PublicationState`, `OfferPresence`, `VisibleVersion`, `OfferState`, `Product.java`, `DomainEvent.java` (3 records), `ProductRepository.java`, `PublicationRepository.java`; `src/test/.../offer/**`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.*' --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ArchitectureOfOfferContextTest' --no-daemon`
 - **review_prompt:** Check `VisibleVersion` and `OfferState` against E04 §9a/§10 incl. RULE-40 (removal hides all versions), the total precedence RULE-35 and the tightened `BLOCKED` (RULE-70: approved-but-blocked only); version immutability, `basedOnVersion` lineage, append-only publications. Report deviations. Do not edit files — report only.
@@ -426,7 +431,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E05 (RULE-36..44 + scenario table), E07 (D1–D5, RULE-48..59); Q27
 - **IN / OUT:** IN: `draft-domain`, `pricing-domain`; OUT: `offer/CompletenessPolicy.java`, `offer/RequirementCatalogue.java` (+ config), `offer/TextCheck.java` + `NoTextCheck`, `offer/Decisions.java`; `src/test/.../offer/decisions/**`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.decisions.*' --no-daemon`
 - **review_prompt:** Check all 8 rows of E05's scenario table and every row of E07 D1–D5: catalogue order (RULE-43), advisory-not-blocking (RULE-48), D2's most-specific-failure order, D3's asymmetry, D4's timing table, D5's separation of duties. Report every uncovered row. Do not edit files — report only.
 
@@ -436,9 +441,19 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E04 §2/§3/§9 (RULE-30, RULE-50/51); `adapter-mediator.md`, `ports.md`, `context-boundaries.md`, `arch-unit.md`
 - **IN / OUT:** IN: `offer-domain`, `decisions-policy`, `draft-domain`, `pricing-domain`; OUT: `mediators/OfferLifecycleMediator.java`; per-context exposure updates in `ArchitectureDescription`
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.mediators.*' --no-daemon`
 - **review_prompt:** Check the mediator orchestrates without deciding: no business invariant in it, only public ports/events crossed, no direct sibling repository/service call, D2 read from the frozen version + current price state (RULE-50), and the ArchUnit mediator allowance is the only boundary relaxation. Report deviations. Do not edit files — report only.
+
+#### coverage-gate
+- **Goal:** enforce the guardrail coverage threshold on the three domain contexts once they exist (A18).
+- **Executor:** general
+- **Docs:** `docs/arch/microservice-java-spring/index.md` (phase 6: JaCoCo at template threshold), `tech-update.md`; A18
+- **IN / OUT:** IN: `draft-domain`, `draft-persistence`, `pricing-domain`, `pricing-persistence`, `offer-domain`, `offer-persistence`, `decisions-policy`; OUT: `offer-management/build.gradle` (coverage scoping re-checked), tests added until green — never a lowered threshold
+- **checks:**
+  - `cd offer-management; ./gradlew jacocoTestCoverageVerification --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
+- **review_prompt:** Check the coverage rule is scoped to `com.example.offer.draft`, `.pricing`, `.offer` (and does not silently exclude the domain packages to pass), the threshold was not lowered, and the added tests assert business behaviour (scenario rows of E05/E06/E07/E08) rather than getters. Report any package excluded without justification. Do not edit files — report only.
 
 #### catalog-projection
 - **Goal:** the `catalog` read context — `ProductReads`, `ProductCompleteness` (A8), review queue, version history — built from all contexts' events.
@@ -455,7 +470,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E02 endpoints `description-draft`, `photos`, `product-photo-formats`, `review-requests`; `adapter-http-command.md`, `adapter-http-query.md`, `security.md`; A7
 - **IN / OUT:** IN: `draft-domain`, `decisions-policy`, `product-mediator`; OUT: `draft/DraftController.java`, `draft/DraftReadsController.java`, request/response DTOs
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.draft.*Controller*' --no-daemon`
 - **review_prompt:** Check every E02 draft/photo/review endpoint: exact path, status codes, `completeness` + advisory `issues[]` (A7) travelling with the draft, 409 `DRAFT_NOT_EDITABLE`/`REVIEW_ALREADY_PENDING`, 403 `REVIEWER_IS_AUTHOR`, 422 field naming, PATCH null-means-unchanged semantics. Report mismatches. Do not edit files — report only.
 
@@ -465,7 +480,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E02 `GET /products`, `GET /products/{productId}`, `GET /review-requests`, `GET /review-requests/{reviewRequestId}`; `adapter-http-query.md`
 - **IN / OUT:** IN: `catalog-projection`; OUT: `catalog/ProductReadsController.java`, `catalog/ReviewQueueController.java`, read records
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.catalog.*Controller*' --no-daemon`
 - **review_prompt:** Check pagination (`page`/`size`), filters (`state`, `query`, review `status`), 404 shapes, `state` enum values and `updatedBy`/`updatedAt` against E02. Report mismatches. Do not edit files — report only.
 
@@ -475,7 +490,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E02 `publication`, `publications`, `versions`, `versions/{version}/revert`, `offer-presence`, and A6's cancellation route; E07 D4
 - **IN / OUT:** IN: `offer-domain`, `product-mediator`, `decisions-policy`; OUT: `offer/PublicationController.java`, `offer/VersionsController.java`, `offer/OfferPresenceController.java`, DTOs
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.*Controller*' --no-daemon`
 - **review_prompt:** Check E02's publication/version/removal endpoints and A6: 422 `PUBLICATION_BLOCKED` with `blocking[]`, 409 `VERSION_NOT_APPROVED`, 404 `VERSION_NOT_FOUND`, revert creates a new draft with `basedOnVersion` (never rewinds), removal idempotent 204, cancellation `SCHEDULED`-only. Report mismatches. Do not edit files — report only.
 
@@ -485,7 +500,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Docs:** E02 `GET/POST/PUT/DELETE /products/{productId}/prices`; E04 §8, E08
 - **IN / OUT:** IN: `pricing-domain`; OUT: `pricing/PricingController.java`, DTOs
 - **checks:**
-  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew test --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.pricing.*Controller*' --no-daemon`
 - **review_prompt:** Check E02 price endpoints: money as string + currency, 422 `INVALID_DATE_RANGE`, overlap → 409 `PRICE_OVERLAP` (A5), rejection when editing a non-`SCHEDULED` entry, derived `state` per E08. Report mismatches. Do not edit files — report only.
 
@@ -496,7 +511,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **IN / OUT:** IN: all domain events; OUT: `publishing/OutboxRepository.java`, `publishing/OutboxRelay.java`, `src/main/resources/db/0005-outbox.yaml`; tests with `testcontainers-kafka`
 - **checks:**
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.publishing.*' --no-daemon`
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
 - **review_prompt:** Check E03 against the implementation: only the three public events cross the boundary (F1 — the other eight stay private), payload fields match the YAML exactly, partition key `productId`, `_v1` names, at-least-once idempotency keys, relay failure never blocks the write transaction. Report deviations. Do not edit files — report only.
 
 #### pricing-lifecycle-scheduler
@@ -506,7 +521,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **IN / OUT:** IN: `pricing-domain`, `outbox-relay`; OUT: `pricing/PriceLifecycleScheduler.java`, `AppConfiguration` scheduling wiring; tests
 - **checks:**
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.pricing.*Lifecycle*' --no-daemon`
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
 - **review_prompt:** Check the transition detection is idempotent per (entry, effective date), reads the business date from the single pinned zone (A9), emits nothing for `ACTIVE→EXPIRED` (E08 T3), and never re-emits an already-relayed transition. Report deviations. Do not edit files — report only.
 
 #### security-roles
@@ -516,7 +531,7 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **IN / OUT:** IN: all controllers; OUT: `AppConfiguration.filterChain()`, `src/test/.../auth/AuthFixture.java`, realm import JSON, cross-endpoint 401/403 tests
 - **checks:**
   - `cd offer-management; ./gradlew test --tests '*Auth*' --no-daemon`
-  - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
+  - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
 - **review_prompt:** Check every E02 endpoint has an explicit security decision, deny-by-default holds, `sales` cannot reach content endpoints and vice versa, 401 without token and 403 with the wrong role, no issuer URI hardcoded. Report endpoints lacking a decision. Do not edit files — report only.
 
 #### deploy-k3s
@@ -591,6 +606,10 @@ None — element files are **not** edited by this proposal. Pending confirmation
 ### Blueprint Gaps (microservice-java-spring)
 
 Found while planning; each is absorbed by a node, not silently worked around:
+
+- **Scaffolded `ArchitectureTest` fails on a clean tree** — `ONION_ARCHITECTURE` passes but `NO_CYCLES_BETWEEN_TOOLS` fails with 20 violations, all `AppConfiguration` → `org.springframework…` / `java.time.Clock`, i.e. types that ARE in the rule's own allow-list; the template also omits `ImportOption.DoNotIncludeTests` which `arch-unit.md` documents. -> `shared-kernel` node.
+- **Unscoped global JaCoCo rule** — `jacocoTestCoverageVerification` enforces 0.8 INSTRUCTION over the **entire** main source set (no class filter), so framework wiring and `tools/` drag the ratio down, and `check.dependsOn jacocoTestCoverageVerification` makes a plain `build`/`check` fail early. -> `build-gates` scopes it to `draft`/`pricing`/`offer` (A18).
+- **`build -x test` looks green while tests never run** — JaCoCo verification is SKIPPED and ArchUnit never executes. -> gate policy (A18): node gates run `test`.
 
 - **No k3s deploy script / no k3s overlay** — only `k8s/overlays/{dev,k3d}` + `scripts/trace.sh`. -> `deploy-k3s` authors `scripts/deploy-k3s.sh` and renames the in-cluster overlay to `k8s/overlays/k3s` (A14).
 - **Docker-only image + scan tasks** — `jibDockerBuild` and `trivyScan`/`trivyScanImage` shell out to `docker`, which does not exist here. -> `podman-toolchain` switches to `jibBuildTar` + `podman load` and `podman run` for trivy (A17).
