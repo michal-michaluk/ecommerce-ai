@@ -75,6 +75,18 @@ seed_fixture() {
     printf '%s %s\n' "${product_id}" "${photo_id}"
 }
 
+# The rejection pair must decide a real pending review (RULE-19 makes a decision terminal),
+# so the harness opens a fresh pending review on its own draft — the same fixture pattern as
+# the photo above. The .hurl then rejects it and asserts the rejected body.
+seed_reject_fixture() {
+    local product_id review_request_id
+    product_id="$(curl -fsS --max-time 10 -X POST "${BASE_URL}/products" -H "Authorization: Bearer ${content_manager_token}" -H 'Content-Type: application/json' -d '{"title":"E2E reject fixture","category":"Ogród"}' | python3 -c 'import sys,json;print(json.load(sys.stdin)["productId"])')"
+    [[ -n "${product_id}" ]] || die "could not seed the reject fixture product"
+    review_request_id="$(curl -fsS --max-time 10 -X POST "${BASE_URL}/products/${product_id}/description-draft/review-requests" -H "Authorization: Bearer ${content_manager_token}" | python3 -c 'import sys,json;print(json.load(sys.stdin)["reviewRequestId"])')"
+    [[ -n "${review_request_id}" ]] || die "could not seed the reject fixture review"
+    printf '%s\n' "${review_request_id}"
+}
+
 main() {
     require hurl
     require curl
@@ -95,6 +107,11 @@ main() {
     read -r fixture_product_id fixture_photo_id < <(seed_fixture)
     [[ -n "${fixture_product_id}" && -n "${fixture_photo_id}" ]] || die "photo fixture seeding failed"
 
+    # The rejection pair must decide a real pending review (RULE-19: a decision is terminal).
+    log "seeding the pending rejection fixture"
+    reject_review_id="$(seed_reject_fixture)"
+    [[ -n "${reject_review_id}" ]] || die "reject fixture seeding failed"
+
     log "running hurl --test against ${BASE_URL}"
     ( cd "${SCRIPT_DIR}" && hurl --test --continue-on-error \
         --variable "BASE_URL=${BASE_URL}" \
@@ -104,6 +121,7 @@ main() {
         --variable "sales_token=${sales_token}" \
         --variable "fixture_product_id=${fixture_product_id}" \
         --variable "fixture_photo_id=${fixture_photo_id}" \
+        --variable "reject_review_id=${reject_review_id}" \
         "${HURL_FILE}" )
 }
 

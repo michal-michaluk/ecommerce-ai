@@ -86,6 +86,20 @@ class OfferLifecycleMediatorTest {
     }
 
     @Test
+    void revertCarriesTheBaseVersionsPhotosIntoTheNewDraft() {                  // RULE-12, E04 §5
+        createEditedAndPricedProduct(activePrice());
+        reviewAndApprove(PRODUCT_ID);
+        DescriptionVersion frozen = mediator.freeze(PRODUCT_ID, reviewer());
+        mediator.publish(PRODUCT_ID, "pub-1", frozen, null, BUSINESS_DATE, reviewer());
+
+        DraftSnapshot reverted = mediator.revert(PRODUCT_ID, "v1", "v2", BUSINESS_DATE, manager());
+
+        assertThat(reverted.version()).isEqualTo("v2");
+        assertThat(reverted.state().name()).isEqualTo("EDITING");
+        assertThat(reverted.photos()).extracting(Photo::photoId).containsExactly("ph-1");
+    }
+
+    @Test
     void publishGuardReadsTheCurrentPriceStateOfTheFrozenVersion() {           // D2/P2, RULE-50
         createEditedAndPricedProduct(expiredPrice());
         reviewAndApprove(PRODUCT_ID);

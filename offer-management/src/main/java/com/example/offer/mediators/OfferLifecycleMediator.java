@@ -157,12 +157,16 @@ public class OfferLifecycleMediator {
                 .filter(version -> version.version().equals(basedOnVersion))
                 .findFirst()
                 .orElseThrow(() -> new DecisionDenied(ErrorCode.VERSION_NOT_FOUND));
+        List<Photo> carriedPhotos = draft(productId).photos().stream()
+                .filter(photo -> base.photoIds().contains(photo.photoId()))
+                .toList();
 
         offers.revert(productId, newVersion, basedOnVersion, audit);
         drafts.create(productId, newVersion, new Title(base.title()), audit);
         if (base.description() != null) {
             drafts.edit(productId, UpdateDraft.builder().description(new Description(base.description())).build(), audit);
         }
+        carriedPhotos.forEach(photo -> drafts.attachPhoto(productId, photo, audit));
         return draft(productId);
     }
 
