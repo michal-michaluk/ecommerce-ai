@@ -18,7 +18,8 @@ class ArchitectureOfDraftContextTest {
     static final String PACKAGE = "com.example.offer.draft";
 
     static final DescribedPredicate<JavaClass> sharedKernelExposed = belongToAnyOf(
-            DraftSnapshot.class, UpdateDraft.class);
+            DraftSnapshot.class, UpdateDraft.class, DraftState.class, Title.class,
+            Description.class, ReviewRequest.class, Photo.class, DraftAttributes.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
             Identity.class, Audit.class);

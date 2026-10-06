@@ -48,3 +48,7 @@ logging.level:
   org.apache.kafka.clients.admin.AdminClientConfig: INFO
   org.apache.kafka.common.utils.AppInfoParser: INFO
   org.apache.kafka.streams.StreamsConfig: INFO
+
+offer:
+  # Ordered mandatory items of E05, supplied as configuration (RULE-36).
+  requirements: TITLE_REQUIRED,DESCRIPTION_REQUIRED,PHOTO_REQUIRED,PRICE_REQUIRED
