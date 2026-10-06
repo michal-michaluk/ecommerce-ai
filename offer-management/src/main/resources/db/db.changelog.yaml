@@ -37,3 +37,6 @@ databaseChangeLog:
 
   - include:
       file: db/0005-outbox.yaml
+
+  - include:
+      file: db/0006-catalog.yaml
