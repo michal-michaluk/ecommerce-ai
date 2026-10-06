@@ -1,0 +1,221 @@
+# A minimal in-cluster stand-in for the `browsing offer` shop (element 03).
+#
+# It subscribes to the single published topic `browsing-offer`, materialises a
+# read model per productId (title, version, price, presence) into an emptyDir,
+# and serves that read model over HTTP with busybox httpd so it can be queried.
+# It never writes back: the boundary is outbound-only.
+#
+# The image is the Kafka CLI image already present in the k3s containerd (A17),
+# so no new image has to be imported into the disk-tight podman VM.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: browsing-offer-consumer
+  namespace: offer-management
+  labels:
+    app: browsing-offer-consumer
+data:
+  consumer.sh: |
+    #!/bin/bash
+    # Materialises the element-03 integration events into a per-product read model.
+    set -u
+    BROKER="${BROKER:-offer-management-kafka:9092}"
+    TOPIC="${TOPIC:-browsing-offer}"
+    WWW="${WWW:-/www}"
+    STATE="${WWW}/state"
+    PRODUCTS="${WWW}/products"
+    mkdir -p "${STATE}" "${PRODUCTS}"
+
+    log() { printf '%s consumer: %s\n' "$(date -u +%FT%TZ)" "$*" >&2; }
+    jget() {
+      local out
+      out="$(printf '%s' "$1" | grep -o "\"$2\": *\"[^\"]*\"" | head -1 || true)"
+      out="$(printf '%s' "${out}" | sed "s/^\"$2\": *\"//; s/\"$//")"
+      printf '%s' "${out}"
+    }
+    jsonstr() {
+      local v="$1"
+      if [[ -z "${v}" || "${v}" == "null" ]]; then printf 'null'; return; fi
+      printf '"%s"' "$(printf '%s' "${v}" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+    }
+    regen() {
+      local pid="$1" dir="${STATE}/${pid}"
+      local title version availableFrom discount present lastEvent events price
+      title="$(cat "${dir}/title" 2>/dev/null || true)"
+      version="$(cat "${dir}/version" 2>/dev/null || true)"
+      availableFrom="$(cat "${dir}/availableFrom" 2>/dev/null || true)"
+      discount="$(cat "${dir}/discountPercent" 2>/dev/null || true)"
+      present="$(cat "${dir}/present" 2>/dev/null || echo false)"
+      lastEvent="$(cat "${dir}/lastEvent" 2>/dev/null || true)"
+      events="$(wc -l < "${dir}/events.log" 2>/dev/null | tr -d ' ')"
+      [[ -n "${events}" ]] || events=0
+      price="null"
+      if [[ -f "${dir}/priceValue" ]]; then
+        price="{\"value\":\"$(cat "${dir}/priceValue")\",\"currency\":\"$(cat "${dir}/priceCurrency")\"}"
+      fi
+      {
+        printf '{\n'
+        printf '  "productId": %s,\n' "$(jsonstr "${pid}")"
+        printf '  "title": %s,\n' "$(jsonstr "${title}")"
+        printf '  "version": %s,\n' "$(jsonstr "${version}")"
+        printf '  "availableFrom": %s,\n' "$(jsonstr "${availableFrom}")"
+        printf '  "price": %s,\n' "${price}"
+        printf '  "discountPercent": %s,\n' "$(jsonstr "${discount}")"
+        printf '  "present": %s,\n' "${present}"
+        printf '  "lastEvent": %s,\n' "$(jsonstr "${lastEvent}")"
+        printf '  "events": %s\n' "${events}"
+        printf '}\n'
+      } > "${PRODUCTS}/${pid}.json"
+    }
+    regen_index() {
+      : > "${WWW}/readmodel.ndjson"
+      local f
+      for f in "${PRODUCTS}"/*.json; do
+        [[ -f "${f}" ]] || continue
+        tr -d '\n' < "${f}" >> "${WWW}/readmodel.ndjson"
+        printf '\n' >> "${WWW}/readmodel.ndjson"
+      done
+    }
+    handle() {
+      local key="$1" payload="$2" type pid dir pobj
+      type="$(jget "${payload}" "@type")"
+      if [[ -z "${type}" ]]; then log "ignoring record without @type: ${payload}"; return 0; fi
+      pid="$(jget "${payload}" "productId")"
+      [[ -n "${pid}" ]] || pid="${key}"
+      dir="${STATE}/${pid}"
+      mkdir -p "${dir}"
+      printf '%s\n' "${payload}" >> "${dir}/events.log"
+      printf '%s' "${type}" > "${dir}/lastEvent"
+      log "consumed ${type} product=${pid}"
+      case "${type}" in
+        ProductVersionPublishedToOffer_v1)
+          printf '%s' "$(jget "${payload}" "title")" > "${dir}/title"
+          printf '%s' "$(jget "${payload}" "version")" > "${dir}/version"
+          printf '%s' "$(jget "${payload}" "availableFrom")" > "${dir}/availableFrom"
+          printf 'true' > "${dir}/present"
+          ;;
+        ProductPricesChanged_v1)
+          pobj="$(printf '%s' "${payload}" | grep -o '"price": *[{][^}]*[}]' | head -1 || true)"
+          if [[ -n "${pobj}" ]]; then
+            printf '%s' "$(jget "${pobj}" "value")" > "${dir}/priceValue"
+            printf '%s' "$(jget "${pobj}" "currency")" > "${dir}/priceCurrency"
+          else
+            rm -f "${dir}/priceValue" "${dir}/priceCurrency"
+          fi
+          printf '%s' "$(jget "${payload}" "discountPercent")" > "${dir}/discountPercent"
+          ;;
+        ProductRemovedFromOffer_v1)
+          printf 'false' > "${dir}/present"
+          ;;
+      esac
+      regen "${pid}"
+      regen_index
+    }
+
+    /opt/kafka/bin/kafka-topics.sh --bootstrap-server "${BROKER}" \
+      --create --if-not-exists --topic "${TOPIC}" --partitions 3 --replication-factor 1 \
+      >/dev/null 2>&1 || true
+
+    # The kafka image's busybox has no httpd applet, so the read model is served
+    # by a brute-force single-shot HTTP responder over `nc`.
+    serve() {
+      while :; do
+        {
+          printf 'HTTP/1.1 200 OK\r\nContent-Type: application/x-ndjson\r\nConnection: close\r\n\r\n'
+          cat "${WWW}/readmodel.ndjson" 2>/dev/null
+        } | nc -l -p 8080 >/dev/null 2>&1
+      done
+    }
+    serve &
+
+    /opt/kafka/bin/kafka-console-consumer.sh \
+      --bootstrap-server "${BROKER}" --topic "${TOPIC}" --from-beginning \
+      --property print.key=true --property key.separator='|' \
+      | while IFS='|' read -r key payload; do
+          handle "${key}" "${payload}"
+        done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: browsing-offer-consumer
+  namespace: offer-management
+  labels:
+    app: browsing-offer-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: browsing-offer-consumer
+  template:
+    metadata:
+      labels:
+        app: browsing-offer-consumer
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: consumer
+          image: docker.io/apache/kafka:4.0.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/bash", "/scripts/consumer.sh"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+            - name: readmodel
+              mountPath: /www
+            - name: tmp
+              mountPath: /tmp
+            - name: kafka-logs
+              mountPath: /opt/kafka/logs
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: script
+          configMap:
+            name: browsing-offer-consumer
+            defaultMode: 0555
+        - name: readmodel
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: kafka-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: browsing-offer-consumer
+  namespace: offer-management
+  labels:
+    app: browsing-offer-consumer
+spec:
+  selector:
+    app: browsing-offer-consumer
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
