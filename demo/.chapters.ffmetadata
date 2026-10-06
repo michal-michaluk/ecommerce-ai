@@ -1,0 +1,50 @@
+;FFMETADATA1
+title=offer-management — implementation increment (scenarios 1–7, DoD I1–I7)
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=0
+END=10090
+title=Intro
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=10090
+END=20790
+title=1. Artifact — the service in the cluster
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=20790
+END=39300
+title=2. Contract — the 22-endpoint API exercised
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=39300
+END=63270
+title=3. Failure — publish with no price
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=63270
+END=77630
+title=4. Gate — architecture and tests green
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=77630
+END=101040
+title=5. Integration — event reaches the consumer
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=101040
+END=129970
+title=6. Admin screens — Storybook prototype
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=129970
+END=142840
+title=7. Value — I7 has no baseline

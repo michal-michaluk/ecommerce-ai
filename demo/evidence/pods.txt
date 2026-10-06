@@ -1,0 +1,6 @@
+$ kubectl -n offer-management get pods
+browsing-offer-consumer-59fcb9ff96-xdgjr   1/1   Running   0               48m
+kafka-56b5455447-kv4rc                     1/1   Running   4 (6h21m ago)   6h42m
+keycloak-6c64757f49-96tps                  1/1   Running   0               85m
+offer-management-75bf7675fd-q7wnc          1/1   Running   0               13m
+offer-management-db-postgresql-0           1/1   Running   0               6h45m

@@ -1,0 +1,31 @@
+{
+  "source_file": "raw/consignment-note.png",
+  "document": {
+    "type": "Consignment Note / Shipping Label (DPD)",
+    "carrier": "DPD",
+    "carrier_legal_name": "DPD Polska sp. z o.o.",
+    "depot_number": "1305",
+    "routing_code": "N-6102",
+    "package": "PACZKA: 1/1",
+    "weight": "1.00 kg"
+  },
+  "sender": {
+    "role": "NADAWCA",
+    "name": "Firma Testowa",
+    "street": "Mineralna 5",
+    "postal_code": "PL-02274",
+    "city": "Warszawa",
+    "phone": "+48 801400373 / +48 225775555"
+  },
+  "recipient": {
+    "role": "Adres doręczenia",
+    "name": "Fir*** Tes***",
+    "contact_person": "Ada*** Now***",
+    "street": "Mineralna 5",
+    "postal_code": "PL-02274",
+    "city": "Warszawa",
+    "phone": null
+  },
+  "privacy_notice": "Państwa dane osobowe są przetwarzane przez DPD Polska sp. z o.o. z siedzibą w Warszawie 02-274 przy ul. Mineralnej 5, w celu i zakresie wskazanym na stronie internetowej: www.dpd.com.pl",
+  "website": "www.dpd.com.pl"
+}

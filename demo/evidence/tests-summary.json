@@ -1,0 +1,36 @@
+{
+  "totals": {
+    "classes": 44,
+    "tests": 317,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "archunit": [
+    {
+      "class": "com.example.offer.catalog.ArchitectureOfCatalogContextTest",
+      "tests": 6,
+      "failures": 0
+    },
+    {
+      "class": "com.example.offer.draft.ArchitectureOfDraftContextTest",
+      "tests": 6,
+      "failures": 0
+    },
+    {
+      "class": "com.example.offer.offer.ArchitectureOfOfferContextTest",
+      "tests": 6,
+      "failures": 0
+    },
+    {
+      "class": "com.example.offer.pricing.ArchitectureOfPricingContextTest",
+      "tests": 6,
+      "failures": 0
+    },
+    {
+      "class": "com.example.offer.publishing.ArchitectureOfPublishingContextTest",
+      "tests": 6,
+      "failures": 0
+    }
+  ]
+}

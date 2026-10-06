@@ -1,0 +1,207 @@
+version: 1
+
+# Test-side rules for the reference implementation — the counterpart of
+# `src/main/java/.sqt.yaml`. Everything below this file is test code.
+#
+# Sources (docs/arch): testing.md (test pyramid, fixtures, custom asserts,
+# @IntegrationTest, @Transactional, "Testing NOGO"), domain-model.md
+# (factory + snapshot, "no field getters"), index.md ("Testing NOGO").
+
+utils:
+  # --- Own-modifier / own-body predicates ----------------------------------
+  # `stopBy: neighbor` reads only the node's direct modifiers and members, so a
+  # nested type or a called method never leaks into the outer verdict.
+
+  # The node's own modifiers carry `public`.
+  has.public-modifier:
+    has: { stopBy: neighbor, kind: modifiers, regex: '\bpublic\b' }
+
+  # A class carrying `@IntegrationTest` (testing.md — the composite annotation).
+  is.integration-test:
+    all:
+      - kind: class_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has:
+            stopBy: end
+            any: [ { kind: annotation }, { kind: marker_annotation } ]
+            has: { field: name, stopBy: end, kind: identifier, regex: '^IntegrationTest$' }
+
+  # --- Test-method / test-class classification -----------------------------
+
+  # A JUnit test method — the whole JUnit 5 family, so parameterised and
+  # repeated tests are covered too.
+  is.test-method:
+    all:
+      - kind: method_declaration
+      - has:
+          stopBy: neighbor
+          kind: modifiers
+          has:
+            stopBy: end
+            any: [ { kind: annotation }, { kind: marker_annotation } ]
+            has: { field: name, stopBy: end, kind: identifier, regex: '^(Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)$' }
+
+  # A class that declares at least one JUnit test method. Architecture tests
+  # hold `@ArchTest` fields, not `@Test` methods, so they are not a `is.test`.
+  is.test:
+    all:
+      - kind: class_declaration
+      - has:
+          field: body
+          stopBy: neighbor
+          kind: class_body
+          has:
+            stopBy: neighbor
+            kind: method_declaration
+            has:
+              stopBy: neighbor
+              kind: modifiers
+              has:
+                stopBy: end
+                any: [ { kind: annotation }, { kind: marker_annotation } ]
+                has: { field: name, stopBy: end, kind: identifier, regex: '^(Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)$' }
+
+  # A `*Fixture` class — the only place allowed to call a wide constructor.
+  is.fixture:
+    all:
+      - kind: class_declaration
+      - has: { field: name, stopBy: end, kind: identifier, regex: 'Fixture$' }
+
+  # An object creation with three or more constructor arguments — `nthChild`
+  # counts *named* siblings, so an `argument_list` holding a 3rd argument means
+  # a constructor of more than two parameters (the `new` argument list is the
+  # node's `arguments` field).
+  is.wide-construction:
+    all:
+      - kind: object_creation_expression
+      - has:
+          field: arguments
+          stopBy: neighbor
+          kind: argument_list
+          has: { stopBy: neighbor, nthChild: 3 }
+
+  # A unit/service test method — a `@Test` outside an `@IntegrationTest`. An
+  # integration test legitimately carries inline JSON fixtures, so it gets its
+  # own, much looser band.
+  is.unit-test-method:
+    all:
+      - matches: is.test-method
+      - not: { inside: { stopBy: end, matches: is.integration-test } }
+
+metrics:
+  # A unit test is a linear given/when/then script: branching and length are
+  # smells, so the bands sit far below the production policy. The reference
+  # implementation tops out at CC 1 and 22 lines per unit test method.
+  cyclomatic_complexity:
+    - filter: { matches: is.unit-test-method }
+      warn: 2
+      error: 4
+  method_lines:
+    - filter: { matches: is.unit-test-method }
+      warn: 20
+      error: 30
+    - warn: 70
+      error: 100
+  method_logical_lines:
+    - filter: { matches: is.unit-test-method }
+      warn: 18
+      error: 28
+    - warn: 65
+      error: 90
+  parameter_count:
+    - filter: { kind: method_declaration }
+      error: 5
+  methods_per_class:
+    - warn: 25
+      error: 40
+  class_lines:
+    - warn: 300
+      error: 500
+  file_lines:
+    - error: 800
+
+checks:
+  # ==================== Test class shape ====================
+  # testing.md — "Package-private test class in the same package as the tested
+  # class". Architecture tests are not `is.test`, so they stay as they are.
+  - id: test.class-package-private
+    language: Java
+    severity: error
+    message: a test class must be package-private (testing.md)
+    filter: { matches: is.test }
+    rule: { matches: has.public-modifier }
+
+  # testing.md — a test method must assert its scenario. A test that only
+  # calls production code and asserts nothing is green by accident.
+  - id: test.method-asserts
+    language: Java
+    severity: error
+    message: a @Test method must contain an assertion (assert / assertThat / verify / fail)
+    filter: { matches: is.test-method }
+    rule:
+      not:
+        has:
+          stopBy: end
+          kind: method_invocation
+          has: { field: name, stopBy: end, kind: identifier, regex: '^(assert|verify|fail)' }
+
+  # index.md "Testing NOGO" — "No mutable shared fixture instances across
+  # tests". Any non-final static field is shared, mutable state.
+  - id: test.no-static-mutable-state
+    language: Java
+    severity: error
+    message: a test class must not declare non-final static fields (shared mutable state)
+    filter: { kind: class_declaration }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - kind: field_declaration
+          - inside: { stopBy: neighbor, kind: class_body }
+          - has: { stopBy: end, kind: modifiers, regex: '\bstatic\b' }
+          - not: { has: { stopBy: end, kind: modifiers, regex: '\bfinal\b' } }
+
+  # ==================== Fixtures ====================
+  # testing.md — "Fixtures are public classes with static factory methods
+  # producing domain objects".
+  - id: test.fixture-public
+    language: Java
+    severity: error
+    message: a *Fixture class must be public (testing.md)
+    filter: { matches: is.fixture }
+    rule: { not: { matches: has.public-modifier } }
+
+  # testing.md / domain-model.md — a domain object whose constructor takes more
+  # than two parameters is built by its fixture factory, never inline in a
+  # test. Construction is the fixture's job; the test reads in business terms.
+  - id: test.new-needs-factory
+    language: Java
+    severity: error
+    message: a `new` with more than 2 constructor arguments belongs in a *Fixture factory method
+    filter: { kind: class_declaration }
+    rule:
+      has:
+        stopBy: end
+        all:
+          - matches: is.wide-construction
+          - not: { inside: { stopBy: end, matches: is.fixture } }
+
+  # ==================== Integration tests ====================
+  # testing.md — "Use @Transactional for test isolation (rollback after each
+  # test)". Every integration test in the reference implementation relies on it.
+  - id: test.integration-test-transactional
+    language: Java
+    severity: error
+    message: an @IntegrationTest must be @Transactional (rollback per test)
+    filter: { matches: is.integration-test }
+    rule:
+      not:
+        has:
+          stopBy: end
+          any: [ { kind: annotation }, { kind: marker_annotation } ]
+          has: { field: name, stopBy: end, kind: identifier, regex: '^Transactional$' }
+
+  # Console output and Thread.sleep are banned for main and test alike — see
+  # `example/.sqt.yaml` (`no-system-out`, `no-thread-sleep`).

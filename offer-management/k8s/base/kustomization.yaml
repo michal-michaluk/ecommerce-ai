@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: offer-management
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+
+labels:
+  - pairs:
+      app: offer-management
+      managed-by: kustomize
+
+images:
+  - name: offer-management
+    newName: offer-management
+    newTag: latest
+
+configMapGenerator:
+  - name: offer-management
+    behavior: merge
+    literals:
+      - kafka-bootstrap-servers=kafka:9092

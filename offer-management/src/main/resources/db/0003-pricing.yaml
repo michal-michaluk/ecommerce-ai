@@ -1,0 +1,51 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0003-pricing-document
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: price_schedule_document
+            columns:
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_schedule
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0003-pricing-events
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: price_schedule_events
+            columns:
+              - column:
+                  name: sequence
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event
+                  type: jsonb
+                  constraints:
+                    nullable: false

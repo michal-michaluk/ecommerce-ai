@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+  namespace: offer-management
+data:
+  iot-realm.json: |
+    {
+      "realm": "iot",
+      "enabled": true,
+      "sslRequired": "external",
+      "registrationAllowed": false,
+      "loginWithEmailAllowed": true,
+      "roles": {
+        "realm": [
+          { "name": "user", "description": "Regular user" },
+          { "name": "admin", "description": "Administrator" },
+          { "name": "content-manager", "description": "Content manager (products, drafts, photos, reviews, publication)" },
+          { "name": "sales", "description": "Sales (prices and discounts)" }
+        ]
+      },
+      "users": [
+        {
+          "username": "john",
+          "enabled": true,
+          "email": "john@test.com",
+          "firstName": "John",
+          "lastName": "Doe",
+          "credentials": [{ "type": "password", "value": "john" }],
+          "realmRoles": ["user"]
+        },
+        {
+          "username": "jane",
+          "enabled": true,
+          "email": "jane@test.com",
+          "firstName": "Jane",
+          "lastName": "Doe",
+          "credentials": [{ "type": "password", "value": "jane" }],
+          "realmRoles": ["user"]
+        },
+        {
+          "username": "admin",
+          "enabled": true,
+          "email": "admin@test.com",
+          "firstName": "Admin",
+          "lastName": "User",
+          "credentials": [{ "type": "password", "value": "admin" }],
+          "realmRoles": ["admin"]
+        },
+        {
+          "username": "carla",
+          "enabled": true,
+          "email": "carla@test.com",
+          "firstName": "Carla",
+          "lastName": "Content",
+          "credentials": [{ "type": "password", "value": "carla" }],
+          "realmRoles": ["content-manager"]
+        },
+        {
+          "username": "marta",
+          "enabled": true,
+          "email": "marta@test.com",
+          "firstName": "Marta",
+          "lastName": "Reviewer",
+          "credentials": [{ "type": "password", "value": "marta" }],
+          "realmRoles": ["content-manager"]
+        },
+        {
+          "username": "sara",
+          "enabled": true,
+          "email": "sara@test.com",
+          "firstName": "Sara",
+          "lastName": "Sales",
+          "credentials": [{ "type": "password", "value": "sara" }],
+          "realmRoles": ["sales"]
+        }
+      ],
+      "clients": [
+        {
+          "clientId": "iot-service",
+          "enabled": true,
+          "publicClient": false,
+          "secret": "secret",
+          "directAccessGrantsEnabled": true,
+          "serviceAccountsEnabled": false,
+          "standardFlowEnabled": false,
+          "protocol": "openid-connect",
+          "attributes": {
+            "access.token.lifespan": "3600"
+          }
+        }
+      ]
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: offer-management-keycloak
+  namespace: offer-management
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: offer-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 0
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.6.1
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 0
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          args:
+            - start-dev
+            - --import-realm
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              value: admin
+            - name: KC_HOSTNAME
+              value: "http://offer-management-keycloak:8080"
+            - name: KC_HOSTNAME_STRICT
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY
+              value: edge
+          startupProbe:
+            httpGet:
+              path: /realms/iot/.well-known/openid-configuration
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 15
+          volumeMounts:
+            - name: keycloak-data
+              mountPath: /opt/keycloak/data
+            - name: realm-config
+              mountPath: /opt/keycloak/data/import/iot-realm.json
+              subPath: iot-realm.json
+      volumes:
+        - name: keycloak-data
+          emptyDir: {}
+        - name: realm-config
+          configMap:
+            name: keycloak-realm

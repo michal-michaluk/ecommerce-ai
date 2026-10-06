@@ -1,0 +1,51 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0002-draft-document
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: draft_document
+            columns:
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: 1
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0002-draft-events
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: draft_events
+            columns:
+              - column:
+                  name: sequence
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event
+                  type: jsonb
+                  constraints:
+                    nullable: false
