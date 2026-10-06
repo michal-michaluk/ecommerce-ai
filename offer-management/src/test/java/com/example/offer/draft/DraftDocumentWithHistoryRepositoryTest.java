@@ -56,7 +56,10 @@ class DraftDocumentWithHistoryRepositoryTest {
     void saveThenGetRestoresEveryField() {
         DraftSnapshot original = fullSnapshot();
 
-        repository.save(DescriptionDraft.restore(original));
+        repository.save(new DescriptionDraft(original.productId(), original.version(), new ArrayList<>(),
+                original.state(), original.revision(), original.title(), original.description(),
+                original.attributes(), original.photos(), original.basedOnVersion(), original.review(),
+                original.lastChange()));
         entityManager.flush();
         entityManager.clear();
 

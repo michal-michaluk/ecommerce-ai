@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +33,10 @@ class DraftDocumentWithHistoryRepository implements DraftRepository {
     public Optional<DescriptionDraft> get(String productId) {
         return documents.findById(productId)
                 .map(DraftDocumentEntity::getDraft)
-                .map(DescriptionDraft::restore);
+                .map(snapshot -> new DescriptionDraft(snapshot.productId(), snapshot.version(),
+                        new ArrayList<>(), snapshot.state(), snapshot.revision(), snapshot.title(),
+                        snapshot.description(), snapshot.attributes(), snapshot.photos(),
+                        snapshot.basedOnVersion(), snapshot.review(), snapshot.lastChange()));
     }
 
     @Override

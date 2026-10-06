@@ -16,6 +16,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,7 +33,8 @@ class PriceScheduleDocumentWithHistoryRepository implements PriceScheduleReposit
     public Optional<PriceSchedule> get(String productId) {
         return documents.findById(productId)
                 .map(PriceScheduleDocumentEntity::getPriceSchedule)
-                .map(PriceSchedule::restore);
+                .map(snapshot -> new PriceSchedule(snapshot.productId(), new ArrayList<>(),
+                        snapshot.prices(), snapshot.discounts()));
     }
 
     @Override

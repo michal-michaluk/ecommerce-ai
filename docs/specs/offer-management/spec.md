@@ -284,6 +284,7 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
 | A19 | Shared kernel package (operator) | `Identity` / `Audit` live in `com.example.offer.auth`, **not** `tools` (overrides E04 §1's "shared kernel in `tools/`"; `.domainModels("..tools..")` does not hold) |
 | A20 | ArchUnit policy (operator) | **no `onionArchitecture()`** — the generic `ArchitectureTest` is removed (commit `f4ebb7e`). Cross-context isolation is enforced per context via `ArchitectureDescription` / `ArchitectureOf{Context}Test` (blueprint `arch-unit.md`), which every context node adds |
 | A21 | Coverage scope (operator) | coverage is calculated on the **domain contexts** (`draft`, `pricing`, `offer`) — never on `tools` — and therefore only becomes meaningful once they exist; the gate runs after phase 4 |
+| A22 | Persistence reconstruction (operator) | adapters rebuild an aggregate through the Lombok **`@AllArgsConstructor`** constructor (the blueprint's own pattern, `prototypes/domain-model-java.md` §2/§3) — **no bespoke `restore(...)` factories**: `DraftDocumentWithHistoryRepository` and `PriceScheduleDocumentWithHistoryRepository` were corrected to construct directly |
 
 ### Plan
 

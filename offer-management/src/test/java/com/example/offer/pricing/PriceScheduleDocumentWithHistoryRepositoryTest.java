@@ -50,7 +50,8 @@ class PriceScheduleDocumentWithHistoryRepositoryTest {
     void saveThenGetRestoresEveryField() {
         PriceScheduleSnapshot original = fullSnapshot();
 
-        repository.save(PriceSchedule.restore(original));
+        repository.save(new PriceSchedule(original.productId(), new ArrayList<>(),
+                original.prices(), original.discounts()));
         entityManager.flush();
         entityManager.clear();
 
