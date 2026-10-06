@@ -83,18 +83,18 @@ public class ApiErrorAdvice {
      */
     private static ResponseEntity<ApiError> contractBody(ErrorResponse error) {
         HttpStatusCode status = error.getStatusCode();
-        ErrorCode code = switch (status.value()) {
-            case 401 -> ErrorCode.UNAUTHENTICATED;
-            case 403 -> ErrorCode.FORBIDDEN;
-            case 404 -> ErrorCode.NOT_FOUND;
-            case 422 -> ErrorCode.VALIDATION_FAILED;
-            case 500 -> ErrorCode.INTERNAL_ERROR;
+        ApiError body = switch (status.value()) {
+            case 401 -> ApiError.unauthenticated();
+            case 403 -> ApiError.forbidden();
+            case 404 -> ApiError.of(ErrorCode.NOT_FOUND, messageFor(ErrorCode.NOT_FOUND));
+            case 422 -> ApiError.of(ErrorCode.VALIDATION_FAILED, messageFor(ErrorCode.VALIDATION_FAILED));
+            case 500 -> ApiError.of(ErrorCode.INTERNAL_ERROR, messageFor(ErrorCode.INTERNAL_ERROR));
             default -> null;
         };
-        if (code == null) {
+        if (body == null) {
             return ResponseEntity.status(status).build();
         }
-        return ResponseEntity.status(status).body(ApiError.of(code, messageFor(code)));
+        return ResponseEntity.status(status).body(body);
     }
 
     private static String messageFor(ErrorCode code) {

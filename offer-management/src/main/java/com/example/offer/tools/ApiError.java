@@ -24,6 +24,16 @@ public record ApiError(ErrorCode code, String message, Map<String, Object> detai
         return new ApiError(code, message, null);
     }
 
+    /** {@code 401 UNAUTHENTICATED}: the request carries no valid bearer token. */
+    public static ApiError unauthenticated() {
+        return of(ErrorCode.UNAUTHENTICATED, "Authentication is required.");
+    }
+
+    /** {@code 403 FORBIDDEN}: the authenticated role does not reach the endpoint. */
+    public static ApiError forbidden() {
+        return of(ErrorCode.FORBIDDEN, "The role is not allowed to perform this operation.");
+    }
+
     /** {@code 422 VALIDATION_FAILED} naming the offending request fields. */
     public static ApiError validation(List<String> fields) {
         return new ApiError(ErrorCode.VALIDATION_FAILED, "Request validation failed.",

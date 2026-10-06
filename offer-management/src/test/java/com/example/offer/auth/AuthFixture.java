@@ -18,6 +18,12 @@ import java.util.Objects;
 @Profile("auth-test")
 public class AuthFixture {
 
+    /** Keycloak users seeded by {@code iot-realm.json}, one per element-02 role. */
+    public static final String CONTENT_MANAGER_USER = "carla";
+    public static final String CONTENT_MANAGER_PASSWORD = "carla";
+    public static final String SALES_USER = "sara";
+    public static final String SALES_PASSWORD = "sara";
+
     private final KeycloakContainer keycloak;
     private final WebClient client;
 
@@ -43,6 +49,16 @@ public class AuthFixture {
         if (!keycloak.isShouldBeReused()) {
             keycloak.stop();
         }
+    }
+
+    /** A bearer token carrying realm role {@code content-manager}. */
+    public String contentManagerToken() {
+        return tokenFor(CONTENT_MANAGER_USER, CONTENT_MANAGER_PASSWORD);
+    }
+
+    /** A bearer token carrying realm role {@code sales}. */
+    public String salesToken() {
+        return tokenFor(SALES_USER, SALES_PASSWORD);
     }
 
     public String tokenFor(String username, String password) {

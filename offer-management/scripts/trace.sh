@@ -14,7 +14,7 @@ Find a trace by spanId and show:
 
 Modes:
   - Local: reads traces.jsonl / logs.jsonl from current directory or OTEL_DATA_DIR
-  - K3s:   reads the collector's emptyDir via the k3s node container (docker exec).
+  - K3s:   reads the collector's emptyDir via the k3s node container (podman exec).
            The collector image is distroless (no shell), so kubectl exec/cp
            into the pod does NOT work — reading via the node is required.
 
@@ -25,7 +25,7 @@ Options:
   -e, --errors      List error spans (status.code==2) and ERROR/WARN log records
   -w, --window DUR  Time window to search (e.g. 20s, 5m, 1h); default: all data
   -n, --namespace   K8s namespace (default: auto-detect collector across namespaces)
-  -c, --container    k3s node container name (default: auto-detect, e.g. settings-k3s)
+  -c, --container    k3s node container name (default: auto-detect, e.g. offer-management-k3s)
   -h, --help        Show this help
 EOF
 }
@@ -91,9 +91,9 @@ compute_cutoff_ns() {
 }
 
 # Auto-detect the k3s node container name (the control-plane container), e.g.
-# settings-k3s, from running containers if not given.
+# offer-management-k3s, from running containers if not given.
 detect_k3s_container() {
-    docker ps --format '{{.Names}}' 2>/dev/null | grep -E '^settings-k3s$|k3s' | head -1
+    podman ps --format '{{.Names}}' 2>/dev/null | grep -E '^offer-management-k3s$|k3s' | head -1
 }
 
 # Locate the collector's emptyDir data dir on the k3s node.
@@ -110,7 +110,7 @@ collector_data_dir_on_node() {
     [[ -z "$K3S_CONTAINER" ]] && K3S_CONTAINER=$(detect_k3s_container)
     [[ -z "$K3S_CONTAINER" ]] && { echo "ERROR: cannot detect the k3s node container" >&2; return 1; }
 
-    node=$(docker ps --format '{{.Names}}' | grep "^${K3S_CONTAINER}$" | head -1)
+    node=$(podman ps --format '{{.Names}}' | grep "^${K3S_CONTAINER}$" | head -1)
     [[ -z "$node" ]] && { echo "ERROR: no k3s node container $K3S_CONTAINER" >&2; return 1; }
 
     podinfo=$(find_collector_pod)
@@ -119,7 +119,7 @@ collector_data_dir_on_node() {
     pod=${podinfo##* }
 
     uid=$(kubectl get pod -n "$ns" "$pod" -o jsonpath='{.metadata.uid}')
-    dir=$(docker exec "$node" sh -c "find /var/lib/kubelet/pods/${uid}/volumes -name traces.jsonl -path '*otel*' 2>/dev/null | head -1" 2>/dev/null)
+    dir=$(podman exec "$node" sh -c "find /var/lib/kubelet/pods/${uid}/volumes -name traces.jsonl -path '*otel*' 2>/dev/null | head -1" 2>/dev/null)
     echo "${dir%/traces.jsonl}"
 }
 
@@ -133,7 +133,7 @@ emit_file() {
         [[ -z "$dir" ]] && { echo "ERROR: no local files and could not read collector data" >&2; exit 1; }
         [[ -z "$K3S_CONTAINER" ]] && K3S_CONTAINER=$(detect_k3s_container)
         [[ -z "$K3S_CONTAINER" ]] && { echo "ERROR: cannot detect the k3s node container" >&2; exit 1; }
-        docker exec "$K3S_CONTAINER" sh -c "cat $dir/$(basename $file)"
+        podman exec "$K3S_CONTAINER" sh -c "cat $dir/$(basename $file)"
     fi
 }
 
