@@ -1,10 +1,14 @@
 package com.example.offer.catalog;
 
 import com.example.offer.offer.OfferState;
+import com.example.offer.tools.ApiError;
+import com.example.offer.tools.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,5 +41,12 @@ class ProductReadsController {
     @PreAuthorize(CONTENT_MANAGER)
     ProductRead detail(@PathVariable String productId) {
         return reads.find(productId).orElseThrow(() -> new ProductReadNotFound(productId));
+    }
+
+    @ExceptionHandler(ProductReadNotFound.class)
+    ResponseEntity<ApiError> onNotFound(ProductReadNotFound ex) {
+        return ResponseEntity.status(ErrorCode.PRODUCT_NOT_FOUND.status())
+                .body(ApiError.of(ErrorCode.PRODUCT_NOT_FOUND,
+                        "Product " + ex.productId() + " does not exist."));
     }
 }

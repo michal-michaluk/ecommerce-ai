@@ -7,6 +7,7 @@ import com.example.offer.draft.DraftAttributes;
 import com.example.offer.draft.DraftSnapshot;
 import com.example.offer.draft.DraftState;
 import com.example.offer.draft.ReviewRequest;
+import com.example.offer.draft.Title;
 import com.example.offer.offer.Completeness;
 import com.example.offer.offer.CompletenessPolicy;
 import com.example.offer.offer.DescriptionVersion;
@@ -37,7 +38,7 @@ class ArchitectureOfCatalogContextTest {
      */
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
             Identity.class, Audit.class,
-            DraftSnapshot.class, DraftState.class, DraftAttributes.class, ReviewRequest.class,
+            DraftSnapshot.class, DraftState.class, DraftAttributes.class, Title.class, ReviewRequest.class,
             ProductSnapshot.class, OfferPresence.class, OfferState.class, Publication.class,
             PublicationState.class, VisibleVersion.class, DescriptionVersion.class,
             Completeness.class, Completeness.MissingRequirement.class, CompletenessPolicy.class,

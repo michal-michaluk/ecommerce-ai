@@ -29,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @IntegrationTest
-@WithMockUser(authorities = "content-manager")
+@WithMockUser(roles = "content-manager")
 class ProductReadsControllerTest {
 
     @Autowired

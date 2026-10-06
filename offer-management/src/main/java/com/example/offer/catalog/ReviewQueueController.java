@@ -1,9 +1,13 @@
 package com.example.offer.catalog;
 
+import com.example.offer.tools.ApiError;
+import com.example.offer.tools.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -32,5 +36,12 @@ class ReviewQueueController {
     @PreAuthorize(CONTENT_MANAGER)
     ReviewRequestRead detail(@PathVariable String reviewRequestId) {
         return reviews.find(reviewRequestId).orElseThrow(() -> new ReviewRequestNotFound(reviewRequestId));
+    }
+
+    @ExceptionHandler(ReviewRequestNotFound.class)
+    ResponseEntity<ApiError> onNotFound(ReviewRequestNotFound ex) {
+        return ResponseEntity.status(ErrorCode.REVIEW_NOT_FOUND.status())
+                .body(ApiError.of(ErrorCode.REVIEW_NOT_FOUND,
+                        "Review request " + ex.reviewRequestId() + " does not exist."));
     }
 }
