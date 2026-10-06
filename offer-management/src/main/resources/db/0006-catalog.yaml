@@ -1,0 +1,160 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0006-catalog-product-reads
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: product_reads
+            columns:
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(255)
+              - column:
+                  name: state
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: visible_version
+                  type: varchar(32)
+              - column:
+                  name: scheduled_version
+                  type: varchar(32)
+              - column:
+                  name: updated_at
+                  type: timestamptz
+              - column:
+                  name: updated_by
+                  type: varchar(255)
+              - column:
+                  name: created_at
+                  type: timestamptz
+              - column:
+                  name: offer_presence
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft_state
+                  type: varchar(32)
+              - column:
+                  name: publications
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: versions
+                  type: jsonb
+                  constraints:
+                    nullable: false
+
+  - changeSet:
+      id: 0006-catalog-product-reads-state-index
+      author: michal.michaluk
+      changes:
+        - createIndex:
+            tableName: product_reads
+            indexName: ix_product_reads_state
+            columns:
+              - column:
+                  name: state
+
+  - changeSet:
+      id: 0006-catalog-product-completeness
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: product_completeness
+            columns:
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: complete
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: missing
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: draft
+                  type: jsonb
+              - column:
+                  name: prices
+                  type: jsonb
+
+  - changeSet:
+      id: 0006-catalog-review-queue
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: review_queue
+            columns:
+              - column:
+                  name: review_request_id
+                  type: varchar(255)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product_title
+                  type: varchar(255)
+              - column:
+                  name: description_version
+                  type: varchar(32)
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: author
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: submitted_at
+                  type: timestamptz
+              - column:
+                  name: decided_by
+                  type: varchar(255)
+              - column:
+                  name: decided_at
+                  type: timestamptz
+              - column:
+                  name: missing_count
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: reason
+                  type: varchar(1024)
+
+  - changeSet:
+      id: 0006-catalog-review-queue-status-index
+      author: michal.michaluk
+      changes:
+        - createIndex:
+            tableName: review_queue
+            indexName: ix_review_queue_status
+            columns:
+              - column:
+                  name: status
