@@ -596,6 +596,7 @@ Found while planning; each is absorbed by a node, not silently worked around:
 - **Docker-only image + scan tasks** — `jibDockerBuild` and `trivyScan`/`trivyScanImage` shell out to `docker`, which does not exist here. -> `podman-toolchain` switches to `jibBuildTar` + `podman load` and `podman run` for trivy (A17).
 - **No Postgres manifest** — the in-cluster overlay's `-db-postgresql` secret/service has no backing Deployment. -> bitnami Helm in `deploy-k3s` (A16).
 - **No e2e/deploy script** — `e2e/*.hurl` exists but nothing runs the stack. -> `deploy-k3s` + `hurl-contract-e2e` (I2/I3, I6).
+- **The default blueprint remote is stale/broken** — `scaffold generate microservice-java-spring` *without* `--repo-url` fails: cargo-generate aborts on `{{.Names}}` in `scripts/trace.sh` because the remote `cargo-generate.toml` excludes only `bin/**`, `.gradle/**`, `build/**`, `gradle/wrapper/gradle-wrapper.jar`. The local `bottega-ai-mind/blueprints` copy is fixed (adds `scripts/trace.sh`, `**/*.hurl`). -> `scaffold-service` must pass `--repo-url /Users/michal/workspace/bottega-ai-mind/blueprints` (done; commit `0a2bed2`).
 
 ### Issues & Resolutions
 
