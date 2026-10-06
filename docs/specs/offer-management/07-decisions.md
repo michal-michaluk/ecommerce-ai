@@ -54,7 +54,7 @@ quality gate (P2): requesting a review **with** missing items is allowed, publis
 | V1 | `EDITING` | `[]` | allow → `ReviewRequest` `PENDING` |
 | V2 | `EDITING` | ≥ 1 | **allow** — the reviewer decides; `missingCount` travels with the request |
 | V3 | `IN_REVIEW` | — | deny `409 REVIEW_ALREADY_PENDING` |
-| V4 | `NONE` (no draft) | — | deny `409 DRAFT_NOT_FOUND` |
+| V4 | `NONE` (no draft) | — | deny `404 PRODUCT_NOT_FOUND` |
 
 - RULE-52: the request guard never consults the quality policy.
 - RULE-53: at most one `PENDING` ReviewRequest exists per product (RULE-17).

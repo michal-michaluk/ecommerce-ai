@@ -417,7 +417,7 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
   - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.*' --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ArchitectureOfOfferContextTest' --no-daemon`
-- **review_prompt:** Check `VisibleVersion` and `OfferState` against E04 §9a/§10 incl. RULE-40 (removal hides all versions), the total precedence RULE-35 and the tightened `BLOCKED` (RULE-70: approved-but-blocked only); version immutability, `basedOnVersion` lineage, append-only publications. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check `VisibleVersion` and `OfferState` against E04 §9a/§10 incl. RULE-40 (removal hides all versions), the total precedence RULE-35 and the tightened `BLOCKED` (RULE-70, approved-but-blocked only); version immutability, `basedOnVersion` lineage, append-only publications. Report deviations. Do not edit files — report only.
 
 #### offer-persistence
 - **Goal:** PostgreSQL document-with-history persistence for `Product`, `DescriptionVersion` and `Publication` + Liquibase changeset (A15).

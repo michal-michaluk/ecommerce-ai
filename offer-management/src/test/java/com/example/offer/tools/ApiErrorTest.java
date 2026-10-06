@@ -25,7 +25,6 @@ class ApiErrorTest {
         assertThat(ErrorCode.PHOTO_FORMAT_UNSUPPORTED.status()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(ErrorCode.PHOTO_TOO_SMALL.status()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
         assertThat(ErrorCode.INVALID_DATE_RANGE.status()).isEqualTo(HttpStatus.UNPROCESSABLE_CONTENT);
-        assertThat(ErrorCode.DRAFT_NOT_FOUND.status()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(ErrorCode.REVIEW_NOT_PENDING.status()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(ErrorCode.INTERNAL_ERROR.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }

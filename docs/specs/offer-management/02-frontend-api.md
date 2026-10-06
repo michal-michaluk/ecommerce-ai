@@ -48,7 +48,7 @@ deny by default, every endpoint below requires a token.
 | 07 Publish | `GET /products/{productId}/publication` | 200 | 401, 403, 404 |
 | 07 Publish | `POST /products/{productId}/publications` | 201 | 401, 403, 404, 409, 422 |
 | 08 Pricing | `GET /products/{productId}/prices` | 200 | 401, 403, 404 |
-| 08 Pricing | `POST /products/{productId}/prices` | 201 | 401, 403, 404, 422 |
+| 08 Pricing | `POST /products/{productId}/prices` | 201 | 401, 403, 404, 409, 422 |
 | 08 Pricing | `PUT /products/{productId}/prices/{priceId}` | 200 | 401, 403, 404, 409, 422 |
 | 08 Pricing | `DELETE /products/{productId}/prices/{priceId}` | 204 | 401, 403, 404 |
 | 09 Versions | `GET /products/{productId}/versions` | 200 | 401, 403, 404 |
@@ -63,17 +63,18 @@ deny by default, every endpoint below requires a token.
 | `PRODUCT_NOT_FOUND` | 404 | every `/products/{productId}/**` |
 | `REVIEW_NOT_FOUND` | 404 | `/review-requests/{id}` |
 | `VERSION_NOT_FOUND` | 404 | revert |
+| `NOT_FOUND` | 404 | unmatched route or unknown resource (platform fallback) |
 | `UNAUTHENTICATED` | 401 | missing or invalid bearer token |
 | `FORBIDDEN` | 403 | wrong role |
 | `DRAFT_NOT_EDITABLE` | 409 | save draft while a review is pending |
 | `REVIEW_ALREADY_PENDING` | 409 | open a second review on the same draft |
 | `REVIEWER_IS_AUTHOR` | 403 | approve/reject own description |
 | `VERSION_NOT_APPROVED` | 409 | publish a version that has no approval |
+| `PRICE_OVERLAP` | 409 | create or edit a price/discount whose range overlaps an existing entry (RULE-25, A5) |
 | `PUBLICATION_BLOCKED` | 422 | publish with open gate items (`blocking[]`) |
 | `PHOTO_FORMAT_UNSUPPORTED` | 422 | upload |
 | `PHOTO_TOO_SMALL` | 422 | upload |
 | `INVALID_DATE_RANGE` | 422 | price/discount `validTo` before `validFrom` |
-| `DRAFT_NOT_FOUND` | 409 | request review when the product has no draft (D3/V4) |
 | `REVIEW_NOT_PENDING` | 409 | approve or reject a review that is not pending (D5 re-decision) |
 | `INTERNAL_ERROR` | 500 | unexpected failure |
 
@@ -96,8 +97,8 @@ deny by default, every endpoint below requires a token.
 - **Q20** — the mockup-invented specifics this contract encodes: the mandatory-item set, the
   advisory grammar check, `PLN`, the `−10 %/−15 %` discount form, the state names, and
   "approve is allowed with missing items, publish is not". Contract asserts hinge on them.
-- **Q18** — pricing units, currency and rounding; `percent` is a string here and
-  `INVALID_DATE_RANGE` does not yet cover overlapping ranges.
+- **Q18** — pricing units, currency and rounding; `percent` is a string here. Overlapping
+  ranges are rejected with `PRICE_OVERLAP` (A5); the rule's exact boundary semantics stay open.
 - **R4** — the illegible board annotation is not used by any endpoint.
 - **Q21** — photo constraints: `minWidth`/`minHeight` and accepted MIME types are invented.
   Confirm, or give the real format policy.

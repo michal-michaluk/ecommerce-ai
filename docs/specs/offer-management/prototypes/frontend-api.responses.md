@@ -21,6 +21,24 @@ Conventions:
 }
 ```
 
+The platform fallback (no resource of its own behind the request):
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "No resource matches the request."
+}
+```
+
+The overlap conflict of the pricing context (RULE-25, A5):
+
+```json
+{
+  "code": "PRICE_OVERLAP",
+  "message": "The price range overlaps an existing entry."
+}
+```
+
 Two codes carry `details`:
 
 ```json
@@ -47,8 +65,8 @@ Two codes carry `details`:
 |---|---|
 | 401 | `UNAUTHENTICATED` |
 | 403 | `FORBIDDEN`, `REVIEWER_IS_AUTHOR` |
-| 404 | `PRODUCT_NOT_FOUND`, `REVIEW_NOT_FOUND`, `VERSION_NOT_FOUND` |
-| 409 | `DRAFT_NOT_EDITABLE`, `REVIEW_ALREADY_PENDING`, `VERSION_NOT_APPROVED` |
+| 404 | `PRODUCT_NOT_FOUND`, `REVIEW_NOT_FOUND`, `VERSION_NOT_FOUND`, `NOT_FOUND` |
+| 409 | `DRAFT_NOT_EDITABLE`, `REVIEW_ALREADY_PENDING`, `REVIEW_NOT_PENDING`, `VERSION_NOT_APPROVED`, `PRICE_OVERLAP` |
 | 422 | `VALIDATION_FAILED`, `PUBLICATION_BLOCKED`, `PHOTO_FORMAT_UNSUPPORTED`, `PHOTO_TOO_SMALL`, `INVALID_DATE_RANGE` |
 | 500 | `INTERNAL_ERROR` |
 
