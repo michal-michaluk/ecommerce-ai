@@ -3,6 +3,11 @@ package com.example.offer.draft;
 import com.example.offer.ArchitectureDescription;
 import com.example.offer.auth.Audit;
 import com.example.offer.auth.Identity;
+import com.example.offer.ApiErrors;
+import com.example.offer.mediators.DecisionDenied;
+import com.example.offer.mediators.OfferLifecycleMediator;
+import com.example.offer.offer.Completeness;
+import com.example.offer.offer.TextIssue;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -22,7 +27,9 @@ class ArchitectureOfDraftContextTest {
             Description.class, ReviewRequest.class, Photo.class, DraftAttributes.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
-            Identity.class, Audit.class);
+            Identity.class, Audit.class, ApiErrors.class,
+            OfferLifecycleMediator.class, DecisionDenied.class,
+            Completeness.class, Completeness.MissingRequirement.class, TextIssue.class);
 
     @ArchTest
     static final ArchRule adaptersDependencies =

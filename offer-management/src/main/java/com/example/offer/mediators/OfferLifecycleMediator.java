@@ -114,8 +114,8 @@ public class OfferLifecycleMediator {
         offers.publish(productId, publicationId, version, availableFrom, businessDate, missingCodes(frozen), audit);
     }
 
-    public void revert(String productId, String basedOnVersion, String newVersion,
-                       LocalDate businessDate, Audit audit) {
+    public DraftSnapshot revert(String productId, String basedOnVersion, String newVersion,
+                               LocalDate businessDate, Audit audit) {
         ProductSnapshot product = offers.get(productId, businessDate)
                 .orElseThrow(() -> new DecisionDenied(ErrorCode.PRODUCT_NOT_FOUND));
         DescriptionVersion base = product.versions().stream()
@@ -128,6 +128,7 @@ public class OfferLifecycleMediator {
         if (base.description() != null) {
             drafts.edit(productId, UpdateDraft.builder().description(new Description(base.description())).build(), audit);
         }
+        return draft(productId);
     }
 
     public void removeFromOffer(String productId, Audit audit) {
@@ -172,8 +173,45 @@ public class OfferLifecycleMediator {
 
     private static <T> T require(Decisions.Decision<T> decision) {
         if (!decision.isAllowed()) {
-            throw new DecisionDenied(decision.denial());
+            throw new DecisionDenied(decision.denial(), decision.blocking());
         }
         return decision.value();
+    }
+
+    /** The draft read behind the draft workspace; the product-not-found contract code travels here. */
+    public DraftSnapshot draftOrThrow(String productId) {
+        return draft(productId);
+    }
+
+    /** The completeness of the current draft at a business date — the server owns the rules (P1). */
+    public Completeness completenessOf(String productId, LocalDate businessDate) {
+        return completenessOf(draft(productId), productId, businessDate);
+    }
+
+    public Completeness completenessOf(DraftSnapshot draft, String productId, LocalDate businessDate) {
+        return completeness.evaluate(draft, priceSchedule(productId), businessDate);
+    }
+
+    public ProductSnapshot productOrThrow(String productId, LocalDate businessDate) {
+        return offers.get(productId, businessDate)
+                .orElseThrow(() -> new DecisionDenied(ErrorCode.PRODUCT_NOT_FOUND));
+    }
+
+    /**
+     * Publishes the requested version of an approved draft: the version must be the approved
+     * draft's own version, it is frozen and published in one orchestrated step (E04 step 7–8).
+     */
+    public ProductSnapshot publishVersion(String productId, String publicationId, String version,
+                                          LocalDate availableFrom, LocalDate businessDate, Audit audit) {
+        DraftSnapshot draft = draft(productId);
+        require(decisions.publishGuard(true, draft.state() == DraftState.APPROVED
+                && draft.version().equals(version), new Completeness(true, List.of(), List.of())));
+        publish(productId, publicationId, freeze(productId, audit), availableFrom, businessDate, audit);
+        return productOrThrow(productId, businessDate);
+    }
+
+    public ProductSnapshot cancelPublication(String productId, String publicationId,
+                                             LocalDate businessDate, Audit audit) {
+        return offers.cancelPublication(productId, publicationId, businessDate, audit);
     }
 }
