@@ -34,8 +34,8 @@ class ReviewQueueController {
 
     @GetMapping("/review-requests/{reviewRequestId}")
     @PreAuthorize(CONTENT_MANAGER)
-    ReviewRequestRead detail(@PathVariable String reviewRequestId) {
-        return reviews.find(reviewRequestId).orElseThrow(() -> new ReviewRequestNotFound(reviewRequestId));
+    ReviewDetail detail(@PathVariable String reviewRequestId) {
+        return reviews.findDetail(reviewRequestId).orElseThrow(() -> new ReviewRequestNotFound(reviewRequestId));
     }
 
     @ExceptionHandler(ReviewRequestNotFound.class)

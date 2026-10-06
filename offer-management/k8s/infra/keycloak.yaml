@@ -57,6 +57,15 @@ data:
           "realmRoles": ["content-manager"]
         },
         {
+          "username": "marta",
+          "enabled": true,
+          "email": "marta@test.com",
+          "firstName": "Marta",
+          "lastName": "Reviewer",
+          "credentials": [{ "type": "password", "value": "marta" }],
+          "realmRoles": ["content-manager"]
+        },
+        {
           "username": "sara",
           "enabled": true,
           "email": "sara@test.com",

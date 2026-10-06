@@ -3,6 +3,7 @@ package com.example.offer.catalog;
 import com.example.offer.draft.DraftSnapshot;
 import com.example.offer.draft.DraftState;
 import com.example.offer.draft.ReviewRequest;
+import com.example.offer.offer.Completeness;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.Ordered;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -72,6 +74,34 @@ class ReviewQueueProjection {
     @Transactional(readOnly = true)
     public Optional<ReviewRequestRead> find(String reviewRequestId) {
         return repository.findById(reviewRequestId).map(ReviewQueueProjection::read);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<ReviewDetail> findDetail(String reviewRequestId) {
+        return repository.findById(reviewRequestId).map(this::detail);
+    }
+
+    private ReviewDetail detail(ReviewQueueEntity entity) {
+        ProductCompletenessEntity completeness = this.completeness.findById(entity.getProductId()).orElse(null);
+        List<Completeness.MissingRequirement> missing = completeness == null || completeness.getMissing() == null
+                ? List.of() : completeness.getMissing();
+        boolean blocked = completeness != null && !completeness.isComplete();
+        DraftSnapshot draft = completeness == null ? null : completeness.getDraft();
+        String title = draft != null && draft.title() != null ? draft.title().value() : entity.getProductTitle();
+        String description = draft != null && draft.description() != null ? draft.description().value() : null;
+        ReviewDetail.Decision decision = entity.getDecidedBy() == null ? null
+                : new ReviewDetail.Decision(entity.getStatus(), entity.getDecidedBy(), entity.getDecidedAt(),
+                        entity.getReason());
+        return new ReviewDetail(entity.getReviewRequestId(), entity.getProductId(), entity.getDescriptionVersion(),
+                entity.getStatus(), entity.getAuthor(), entity.getSubmittedAt(),
+                new ReviewDetail.Gate(blocked, missing, List.of()),
+                new ReviewDetail.Preview(title, description, wordCount(description),
+                        draft == null ? 0 : draft.photos().size(), null),
+                decision);
+    }
+
+    private static int wordCount(String description) {
+        return description == null || description.isBlank() ? 0 : description.strip().split("\\s+").length;
     }
 
     private int missingCount(String productId) {

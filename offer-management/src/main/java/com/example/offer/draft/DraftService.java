@@ -19,6 +19,10 @@ public class DraftService {
         return repository.get(productId).map(DescriptionDraft::toDraftSnapshot);
     }
 
+    public Optional<String> productIdOfReview(String reviewRequestId) {
+        return repository.productIdOfReview(reviewRequestId);
+    }
+
     public DraftSnapshot create(String productId, String version, Title title, Audit audit) {
         DescriptionDraft draft = DescriptionDraft.newDraft(productId, version, title, audit);
         repository.save(draft);

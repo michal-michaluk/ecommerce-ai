@@ -83,6 +83,34 @@ public class OfferLifecycleMediator {
         offers.changeDraftState(productId, com.example.offer.offer.DraftState.EDITING, audit);
     }
 
+    /** Approves the review named by its id — the frontend decision endpoint is keyed by review, not product. */
+    public ReviewRequest approveReview(String reviewRequestId, Audit audit) {
+        String productId = reviewProduct(reviewRequestId);
+        ReviewRequest review = draft(productId).review();
+        ReviewRequest decision = new ReviewRequest(reviewRequestId, review.author(), audit.who(), audit.at());
+        approve(productId, decision, audit);
+        return decision;
+    }
+
+    /** Rejects the review named by its id, carrying the reviewer's reason. */
+    public ReviewRequest rejectReview(String reviewRequestId, String reason, Audit audit) {
+        String productId = reviewProduct(reviewRequestId);
+        ReviewRequest review = draft(productId).review();
+        ReviewRequest decision = new ReviewRequest(reviewRequestId, review.author(), audit.who(), audit.at());
+        reject(productId, decision, reason, audit);
+        return decision;
+    }
+
+    private String reviewProduct(String reviewRequestId) {
+        String productId = drafts.productIdOfReview(reviewRequestId)
+                .orElseThrow(() -> new DecisionDenied(ErrorCode.REVIEW_NOT_FOUND));
+        ReviewRequest review = draft(productId).review();
+        if (review == null || !review.reviewRequestId().equals(reviewRequestId)) {
+            throw new DecisionDenied(ErrorCode.REVIEW_NOT_FOUND);
+        }
+        return productId;
+    }
+
     /** Freezes the approved draft into an immutable version (E04 §2 step 7). */
     public DescriptionVersion freeze(String productId, Audit audit) {
         DraftSnapshot draft = draft(productId);

@@ -50,6 +50,16 @@ class DraftServiceTest {
         }
 
         @Override
+        public Optional<String> productIdOfReview(String reviewRequestId) {
+            return store.values().stream()
+                    .map(DescriptionDraft::toDraftSnapshot)
+                    .filter(draft -> draft.review() != null
+                            && reviewRequestId.equals(draft.review().reviewRequestId()))
+                    .map(DraftSnapshot::productId)
+                    .findFirst();
+        }
+
+        @Override
         public void save(DescriptionDraft draft) {
             store.put(draft.toDraftSnapshot().productId(), draft);
         }

@@ -13,7 +13,9 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Primary;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -40,6 +42,11 @@ class DraftDocumentWithHistoryRepository implements DraftRepository {
     }
 
     @Override
+    public Optional<String> productIdOfReview(String reviewRequestId) {
+        return documents.findProductIdByReviewRequestId(reviewRequestId);
+    }
+
+    @Override
     public void save(DescriptionDraft draft) {
         DraftSnapshot snapshot = draft.toDraftSnapshot();
         List<DomainEvent> emitted = drain(draft);
@@ -61,6 +68,10 @@ class DraftDocumentWithHistoryRepository implements DraftRepository {
 
     @Repository
     interface DocumentRepository extends CrudRepository<DraftDocumentEntity, String> {
+
+        @Query(value = "select product_id from draft_document "
+                + "where draft -> 'review' ->> 'reviewRequestId' = :reviewRequestId", nativeQuery = true)
+        Optional<String> findProductIdByReviewRequestId(@Param("reviewRequestId") String reviewRequestId);
     }
 
     @Repository
