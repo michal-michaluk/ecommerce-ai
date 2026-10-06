@@ -328,12 +328,12 @@ G0–G6 = `./gradlew test` → `./gradlew spotbugsMain trivyScan pitest jibBuild
 #### shared-kernel
 - **Goal:** add the shared-kernel types and the single clock zone.
 - **Executor:** general
-- **Docs:** `context-boundaries.md`, `arch-unit.md`; E04 §1/§11a (RULE-60, RULE-62, RULE-69), A9
-- **IN / OUT:** IN: generated `tools/`; OUT: `tools/Identity.java`, `tools/Audit.java`, `AppConfiguration.java` (Clock zone), `src/test/.../ArchitectureDescription.java` + per-context exposure lists
+- **Docs:** `context-boundaries.md`, `arch-unit.md`; E04 §1/§11a (RULE-60, RULE-62, RULE-69), A9, A19
+- **IN / OUT:** IN: generated tree; OUT: `auth/Identity.java`, `auth/Audit.java` (in `com.example.offer.auth`, **not** `tools` — A19), `AppConfiguration.java` (`BUSINESS_ZONE` + `Clock` bean), `ArchitectureTest.java` (onion with `auth` as domain models; `tools`/`mediators` as adapters), `src/test/.../auth/{IdentityTest,AuditTest}.java`
 - **checks:**
   - `cd offer-management; ./gradlew test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*Architecture*' --no-daemon`
-- **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation) and that `ArchitectureDescription` exposure lists were updated for the new shared-kernel types. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation), that they live in `com.example.offer.auth` and not `tools`, and that the `Clock` bean is the single pinned-zone business clock. Reject any ArchUnit weakening used to force green. Report deviations. Do not edit files — report only.
 
 #### build-gates
 - **Goal:** make the generated build podman-only and scope the coverage gate (A17, A18).
@@ -610,6 +610,7 @@ Found while planning; each is absorbed by a node, not silently worked around:
 - **Scaffolded `ArchitectureTest` fails on a clean tree** — `ONION_ARCHITECTURE` passes but `NO_CYCLES_BETWEEN_TOOLS` fails with 20 violations, all `AppConfiguration` → `org.springframework…` / `java.time.Clock`, i.e. types that ARE in the rule's own allow-list; the template also omits `ImportOption.DoNotIncludeTests` which `arch-unit.md` documents. -> `shared-kernel` node.
 - **Unscoped global JaCoCo rule** — `jacocoTestCoverageVerification` enforces 0.8 INSTRUCTION over the **entire** main source set (no class filter), so framework wiring and `tools/` drag the ratio down, and `check.dependsOn jacocoTestCoverageVerification` makes a plain `build`/`check` fail early. -> `build-gates` scopes it to `draft`/`pricing`/`offer` (A18).
 - **`build -x test` looks green while tests never run** — JaCoCo verification is SKIPPED and ArchUnit never executes. -> gate policy (A18): node gates run `test`.
+- **`jacocoTestCoverageVerification` computes `0.0` regardless of coverage** — reproduced from `clean test jacocoTestCoverageVerification`: the same `build/jacoco/test.exec` yields `INSTRUCTION covered 31 / missed 342` (8.3%) in the report while the verification reports `instructions covered ratio is 0.0`. The guardrail can therefore never pass. -> `build-gates`.
 
 - **No k3s deploy script / no k3s overlay** — only `k8s/overlays/{dev,k3d}` + `scripts/trace.sh`. -> `deploy-k3s` authors `scripts/deploy-k3s.sh` and renames the in-cluster overlay to `k8s/overlays/k3s` (A14).
 - **Docker-only image + scan tasks** — `jibDockerBuild` and `trivyScan`/`trivyScanImage` shell out to `docker`, which does not exist here. -> `podman-toolchain` switches to `jibBuildTar` + `podman load` and `podman run` for trivy (A17).
