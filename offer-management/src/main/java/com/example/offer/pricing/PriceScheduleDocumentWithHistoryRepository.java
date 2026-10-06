@@ -19,6 +19,7 @@ import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 @Primary
 @Repository
@@ -35,6 +36,14 @@ class PriceScheduleDocumentWithHistoryRepository implements PriceScheduleReposit
                 .map(PriceScheduleDocumentEntity::getPriceSchedule)
                 .map(snapshot -> new PriceSchedule(snapshot.productId(), new ArrayList<>(),
                         snapshot.prices(), snapshot.discounts()));
+    }
+
+    @Override
+    public List<PriceSchedule> all() {
+        return StreamSupport.stream(documents.findAll().spliterator(), false)
+                .map(PriceScheduleDocumentEntity::getPriceSchedule)
+                .map(PriceSchedule::restore)
+                .toList();
     }
 
     @Override

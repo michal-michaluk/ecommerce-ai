@@ -11,4 +11,5 @@ spring:
 
 outbox:
   delay: PT0.1S
+  initial-delay: PT1H
   batch: 1000

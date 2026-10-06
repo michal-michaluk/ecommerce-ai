@@ -20,7 +20,9 @@ public class ArchitectureDescription {
             simpleNameEndingWith("Entity"),
             simpleNameEndingWith("Integration"),
             simpleNameEndingWith("Listener"),
-            simpleNameEndingWith("Client")
+            simpleNameEndingWith("Client"),
+            simpleNameEndingWith("Relay"),
+            simpleNameEndingWith("Scheduler")
     );
 
     public static final DescribedPredicate<JavaClass> services = simpleNameEndingWith("Service");
