@@ -15,6 +15,7 @@ public class ArchitectureDescription {
 
     public static final DescribedPredicate<JavaClass> adapters = or(
             simpleNameEndingWith("Controller"),
+            simpleNameEndingWith("Advice"),
             simpleNameEndingWith("Repository"),
             simpleNameEndingWith("Projection"),
             simpleNameEndingWith("Entity"),

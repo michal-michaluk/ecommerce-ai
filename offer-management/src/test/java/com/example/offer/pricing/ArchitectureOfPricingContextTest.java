@@ -1,8 +1,11 @@
 package com.example.offer.pricing;
 
 import com.example.offer.ArchitectureDescription;
+import com.example.offer.ApiErrors;
 import com.example.offer.auth.Audit;
 import com.example.offer.auth.Identity;
+import com.example.offer.mediators.DecisionDenied;
+import com.example.offer.mediators.OfferLifecycleMediator;
 import com.example.offer.publishing.IntegrationEvent;
 import com.example.offer.publishing.Outbox;
 import com.tngtech.archunit.base.DescribedPredicate;
@@ -24,7 +27,8 @@ class ArchitectureOfPricingContextTest {
             PriceState.class, EffectivePrice.class, PriceScheduleSnapshot.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
-            Identity.class, Audit.class,
+            Identity.class, Audit.class, ApiErrors.class,
+            OfferLifecycleMediator.class, DecisionDenied.class,
             Outbox.class, IntegrationEvent.class,
             IntegrationEvent.ProductPricesChanged.class, IntegrationEvent.PriceView.class);
 
