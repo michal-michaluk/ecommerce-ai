@@ -66,6 +66,23 @@ configurations {
 test {
     useJUnitPlatform()
     finalizedBy jacocoTestReport
+
+    // Testcontainers talks to podman (no docker daemon): point it at the podman docker-compatible socket.
+    def dockerHost = System.getenv("DOCKER_HOST") ?: podmanDockerHost()
+    if (dockerHost) {
+        environment "DOCKER_HOST", dockerHost
+    }
+}
+
+static String podmanDockerHost() {
+    try {
+        def process = ["podman", "machine", "inspect", "--format", "{{.ConnectionInfo.PodmanSocket.Path}}"].execute()
+        process.waitFor()
+        def path = process.text.trim()
+        return path ? "unix://${path}" : null
+    } catch (Exception ignored) {
+        return null
+    }
 }
 
 jacoco {

@@ -25,3 +25,6 @@ databaseChangeLog:
       changes:
         - tagDatabase:
             tag: template-generated
+
+  - include:
+      file: db/0002-draft.yaml

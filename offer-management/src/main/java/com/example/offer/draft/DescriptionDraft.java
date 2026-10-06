@@ -40,6 +40,13 @@ class DescriptionDraft {
         return draft;
     }
 
+    static DescriptionDraft restore(DraftSnapshot snapshot) {
+        return new DescriptionDraft(snapshot.productId(), snapshot.version(), new ArrayList<>(),
+                snapshot.state(), snapshot.revision(), snapshot.title(), snapshot.description(),
+                snapshot.attributes(), snapshot.photos(), snapshot.basedOnVersion(), snapshot.review(),
+                snapshot.lastChange());
+    }
+
     void edit(UpdateDraft update, Audit audit) {
         checkEditable();
         Title newTitle = firstNonNull(update.title(), title);
