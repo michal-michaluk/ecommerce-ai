@@ -28,3 +28,6 @@ databaseChangeLog:
 
   - include:
       file: db/0002-draft.yaml
+
+  - include:
+      file: db/0003-pricing.yaml
