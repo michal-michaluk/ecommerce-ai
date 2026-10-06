@@ -21,6 +21,10 @@ class PriceSchedule {
         return new PriceSchedule(productId, new ArrayList<>(), List.of(), List.of());
     }
 
+    static PriceSchedule restore(PriceScheduleSnapshot snapshot) {
+        return new PriceSchedule(snapshot.productId(), new ArrayList<>(), snapshot.prices(), snapshot.discounts());
+    }
+
     void schedulePrice(String priceId, Money amount, DateRange validity, Audit audit) {
         checkNoOverlap(prices.stream().map(Price::validity).toList(), validity);
         this.prices = append(prices, new Price(priceId, productId, amount, validity));
