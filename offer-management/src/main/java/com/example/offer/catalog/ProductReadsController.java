@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 class ProductReadsController {
 
-    private static final String CONTENT_MANAGER = "hasAuthority('content-manager')";
+    private static final String CONTENT_MANAGER = "hasRole('content-manager')";
 
     private final ProductReadsProjection reads;
 

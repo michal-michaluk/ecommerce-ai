@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -117,6 +118,24 @@ class ProductReadsControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("REVIEW_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("Review request rr-missing does not exist."));
+    }
+
+    @Test
+    @WithMockUser(roles = "sales")
+    void wrongRoleIsForbiddenWithContractBody() throws Exception {
+        mvc.perform(get("/products"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    @WithAnonymousUser
+    void missingTokenIsUnauthenticatedWithContractBody() throws Exception {
+        mvc.perform(get("/products"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"))
+                .andExpect(jsonPath("$.message").isNotEmpty());
     }
 
     private String seedPublished(String productId) {
