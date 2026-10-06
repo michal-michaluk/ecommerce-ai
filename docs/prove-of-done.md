@@ -8,7 +8,7 @@ Every row below is **observed output**, not expectation. Nothing was weakened to
 
 | # | Facet | Executed | Result |
 |---|---|---|---|
-| I1 | Artifact | `./gradlew clean build` | **FAIL** — build aborts at `:spotbugsTest` (container itself starts; tests/arch tests/jacoco pass) |
+| I1 | Artifact | `./gradlew clean build` | **PASS** — BUILD SUCCESSFUL (40s) with `:spotbugsTest`, `:spotbugsMain` and `:jacocoTestCoverageVerification` all green; container starts. Initially FAIL: `:spotbugsTest` aborted the build on `DM_DEFAULT_ENCODING` in `DraftControllerTest` (`String.getBytes()` without a charset) — fixed with `StandardCharsets.UTF_8`. |
 | I2 | Contract | `bash offer-management/e2e/run-e2e.sh` | **PARTIAL** — 41 pairs, 39 pass / 2 fail |
 | I3 | Failure | per-pair evidence from the hurl run | **PASS** — all 16 declared error pairs return their declared code + status |
 | I4 | No false green | live-API publish with no price | **PASS** — `422 PUBLICATION_BLOCKED` with `details.blocking` |

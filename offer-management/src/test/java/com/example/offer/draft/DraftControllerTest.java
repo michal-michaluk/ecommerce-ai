@@ -151,7 +151,7 @@ class DraftControllerTest extends ControllerTestSupport {
     void unsupportedPhotoFormatIsUnprocessable() throws Exception {
         String productId = createProduct("Kosiarka");
 
-        upload(productId, "%PDF-1.7".getBytes(), "scan.pdf", "application/pdf")
+        upload(productId, "%PDF-1.7".getBytes(java.nio.charset.StandardCharsets.UTF_8), "scan.pdf", "application/pdf")
                 .expectStatus().isEqualTo(422)
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("PHOTO_FORMAT_UNSUPPORTED");
