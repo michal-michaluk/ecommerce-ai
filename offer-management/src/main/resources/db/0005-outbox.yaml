@@ -1,0 +1,57 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 0005-outbox
+      author: michal.michaluk
+      changes:
+        - createTable:
+            tableName: outbox
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: outbox_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uq_outbox_key
+              - column:
+                  name: event_type
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: partition_key
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: jsonb
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  constraints:
+                    nullable: false
+              - column:
+                  name: published_at
+                  type: timestamptz
+
+  - changeSet:
+      id: 0005-outbox-pending-index
+      author: michal.michaluk
+      changes:
+        - createIndex:
+            tableName: outbox
+            indexName: ix_outbox_pending
+            columns:
+              - column:
+                  name: published_at

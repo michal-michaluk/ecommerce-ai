@@ -18,6 +18,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 
 @Primary
 @Repository
@@ -33,6 +34,14 @@ class PriceScheduleDocumentWithHistoryRepository implements PriceScheduleReposit
         return documents.findById(productId)
                 .map(PriceScheduleDocumentEntity::getPriceSchedule)
                 .map(PriceSchedule::restore);
+    }
+
+    @Override
+    public List<PriceSchedule> all() {
+        return StreamSupport.stream(documents.findAll().spliterator(), false)
+                .map(PriceScheduleDocumentEntity::getPriceSchedule)
+                .map(PriceSchedule::restore)
+                .toList();
     }
 
     @Override

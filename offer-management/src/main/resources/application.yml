@@ -11,9 +11,11 @@ spring:
       hibernate.type.json_format_mapper: com.example.offer.tools.Jackson3JsonFormatMapper
   liquibase:
     change-log: classpath:db/db.changelog.yaml
-  kafka.consumer:
-    group-id: offer-management-default
-    auto-offset-reset: earliest
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: offer-management-default
+      auto-offset-reset: earliest
   security:
     oauth2:
       resourceserver:

@@ -80,6 +80,44 @@ class PriceSchedule {
         return EffectivePrice.of(prices, discounts, businessDate);
     }
 
+    /**
+     * Entries that cross from {@code SCHEDULED} to {@code ACTIVE} on {@code businessDate}
+     * (E08 T2). {@code ACTIVE} to {@code EXPIRED} (T3) is deliberately not returned: it emits
+     * nothing. Each crossing carries the resolved view the shop needs (element 03).
+     */
+    List<PriceActivation> activationsAt(LocalDate businessDate) {
+        LocalDate previous = businessDate.minusDays(1);
+        List<PriceActivation> activations = new ArrayList<>();
+        for (Price price : prices) {
+            if (crossesIntoActive(price.stateAt(previous), price.stateAt(businessDate))) {
+                activations.add(new PriceActivation(price.priceId(), price.amount(), activeDiscount(businessDate)));
+            }
+        }
+        for (Discount discount : discounts) {
+            if (crossesIntoActive(discount.stateAt(previous), discount.stateAt(businessDate))) {
+                Money base = activePrice(businessDate).map(Price::amount).orElse(null);
+                activations.add(new PriceActivation(discount.discountId(), base, discount.percent()));
+            }
+        }
+        return activations;
+    }
+
+    private static boolean crossesIntoActive(PriceState before, PriceState after) {
+        return before == PriceState.SCHEDULED && after == PriceState.ACTIVE;
+    }
+
+    private Optional<Price> activePrice(LocalDate businessDate) {
+        return prices.stream().filter(price -> price.stateAt(businessDate) == PriceState.ACTIVE).findFirst();
+    }
+
+    private Percent activeDiscount(LocalDate businessDate) {
+        return discounts.stream()
+                .filter(discount -> discount.stateAt(businessDate) == PriceState.ACTIVE)
+                .map(Discount::percent)
+                .findFirst()
+                .orElse(null);
+    }
+
     PriceScheduleSnapshot toSnapshot() {
         return new PriceScheduleSnapshot(productId, prices, discounts);
     }

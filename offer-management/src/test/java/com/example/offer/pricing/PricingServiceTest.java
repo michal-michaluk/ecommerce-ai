@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,6 +52,11 @@ class PricingServiceTest {
         @Override
         public Optional<PriceSchedule> get(String productId) {
             return Optional.ofNullable(store.get(productId));
+        }
+
+        @Override
+        public List<PriceSchedule> all() {
+            return List.copyOf(store.values());
         }
 
         @Override
