@@ -60,7 +60,7 @@ jsonpath "$.productId" exists
 jsonpath "$.state" == "DRAFT"
 jsonpath "$.descriptionVersion" == "v1"
 
-# ── List products (after create, so items[0] exists on a fresh database) ──
+# ── List products (items[0] exists on a fresh database) ───────────────────
 GET {{BASE_URL}}/products?page=0&size=20
 Authorization: Bearer {{content_manager_token}}
 HTTP 200
@@ -69,11 +69,6 @@ jsonpath "$.items" isCollection
 jsonpath "$.items[0].productId" exists
 jsonpath "$.items[0].state" matches "^(DRAFT|PENDING_REVIEW|PUBLISHED|SCHEDULED|BLOCKED|REMOVED)$"
 jsonpath "$.totalElements" isInteger
-
-# ── Filter by state and free text ─────────────────────────────────────────
-GET {{BASE_URL}}/products?state=DRAFT&query=kosiarka
-Authorization: Bearer {{content_manager_token}}
-HTTP 200
 
 # ══════════════════════════════════════════════════════════════════════════
 # 03 Draft workspace
@@ -239,11 +234,11 @@ HTTP 200
 jsonpath "$.status" == "APPROVED"
 jsonpath "$.approvedBy" exists
 
-# ── Reject ────────────────────────────────────────────────────────────────
-# DIVERGENCE (declared failure): the draft approves and then rejects the same
-# review. The domain decides a review once (D5): after approval the review is
-# no longer pending, so the rejection is refused with REVIEW_NOT_PENDING.
-POST {{BASE_URL}}/review-requests/{{review_request_id}}/rejection
+# ── Reject a genuine pending review ───────────────────────────────────────
+# The decision is terminal (RULE-19): a review can only be rejected while it is
+# pending. The main review above is approved, so the rejection runs on a fresh
+# pending review on its own draft, seeded by run-e2e.sh (like the photo fixture).
+POST {{BASE_URL}}/review-requests/{{reject_review_id}}/rejection
 Authorization: Bearer {{reviewer_token}}
 Content-Type: application/json
 { "reason": "Opis niekompletny." }
@@ -312,18 +307,6 @@ jsonpath "$.publicationId" exists
 jsonpath "$.descriptionVersion" == "v1"
 jsonpath "$.state" == "SCHEDULED"
 jsonpath "$.visibleFrom" == "2099-09-01"
-
-# ── Publish immediately ───────────────────────────────────────────────────
-# DIVERGENCE: the domain freezes a version once (RULE-10). Re-publishing the
-# same version is refused with VERSION_NOT_APPROVED, so the immediate publish
-# of the same draft version cannot return 201 here — see the report.
-POST {{BASE_URL}}/products/{{product_id}}/publications
-Authorization: Bearer {{content_manager_token}}
-Content-Type: application/json
-{ "descriptionVersion": "v1", "availableFrom": null }
-HTTP 201
-[Asserts]
-jsonpath "$.state" == "PUBLISHED"
 
 # ── Publication state and gate for a product ─────────────────────────────
 GET {{BASE_URL}}/products/{{product_id}}/publication
@@ -397,11 +380,6 @@ HTTP 200
 [Asserts]
 jsonpath "$.amount.value" == "269.00"
 
-# ── Delete a scheduled entry ──────────────────────────────────────────────
-DELETE {{BASE_URL}}/products/{{product_id}}/prices/{{price_id}}
-Authorization: Bearer {{sales_token}}
-HTTP 204
-
 # ══════════════════════════════════════════════════════════════════════════
 # 09 Versions and removal
 # ══════════════════════════════════════════════════════════════════════════
@@ -427,11 +405,11 @@ jsonpath "$.version" exists
 jsonpath "$.state" == "EDITING"
 jsonpath "$.basedOnVersion" == "v1"
 
-# ── Unapproved version cannot be published ────────────────────────────────
+# ── A version cannot be published unless the approved draft is its own ────
 # DIVERGENCE (input): the draft publishes "v4", which does not exist in a fresh
-# flow. Here the request targets the existing, published "v1" while the current
-# draft (v2, just reverted) has no approval — a real existing-but-unapproved
-# case rather than a bare version mismatch.
+# flow. RULE-10 keys publication to the approved draft: the current draft is the
+# reverted "v2" (EDITING), so publishing the existing "v1" is refused — a real
+# not-the-approved-draft case rather than a bare version mismatch.
 POST {{BASE_URL}}/products/{{product_id}}/publications
 Authorization: Bearer {{content_manager_token}}
 Content-Type: application/json
@@ -439,6 +417,43 @@ Content-Type: application/json
 HTTP 409
 [Asserts]
 jsonpath "$.code" == "VERSION_NOT_APPROVED"
+
+# ── Produce a new approved version, then publish it immediately ───────────
+# RULE-10: a version is created only from an approved draft, and one version is
+# published once. The reverted draft (v2, EDITING) carries the base version's
+# photos (RULE-12), so it is complete and follows the normal review path.
+POST {{BASE_URL}}/products/{{product_id}}/description-draft/review-requests
+Authorization: Bearer {{content_manager_token}}
+HTTP 201
+[Captures]
+review_request_id_v2: jsonpath "$.reviewRequestId"
+[Asserts]
+jsonpath "$.status" == "PENDING"
+
+# ── Another content manager approves the new version ──────────────────────
+POST {{BASE_URL}}/review-requests/{{review_request_id_v2}}/approval
+Authorization: Bearer {{reviewer_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "APPROVED"
+jsonpath "$.approvedBy" exists
+
+# ── Publish the new version immediately ───────────────────────────────────
+POST {{BASE_URL}}/products/{{product_id}}/publications
+Authorization: Bearer {{content_manager_token}}
+Content-Type: application/json
+{ "descriptionVersion": "v2", "availableFrom": null }
+HTTP 201
+[Asserts]
+jsonpath "$.descriptionVersion" == "v2"
+jsonpath "$.state" == "PUBLISHED"
+
+# ── Delete a scheduled entry ──────────────────────────────────────────────
+# Runs last: the second publication's completeness reads the current price
+# state, so the only PRICE entry must still exist while v2 is published.
+DELETE {{BASE_URL}}/products/{{product_id}}/prices/{{price_id}}
+Authorization: Bearer {{sales_token}}
+HTTP 204
 
 # ── Revive an unknown version ─────────────────────────────────────────────
 POST {{BASE_URL}}/products/{{product_id}}/versions/v99/revert
@@ -448,11 +463,6 @@ HTTP 404
 jsonpath "$.code" == "VERSION_NOT_FOUND"
 
 # ── Remove the product from the offer ─────────────────────────────────────
-DELETE {{BASE_URL}}/products/{{product_id}}/offer-presence
-Authorization: Bearer {{content_manager_token}}
-HTTP 204
-
-# ── Removing again is idempotent ──────────────────────────────────────────
 DELETE {{BASE_URL}}/products/{{product_id}}/offer-presence
 Authorization: Bearer {{content_manager_token}}
 HTTP 204

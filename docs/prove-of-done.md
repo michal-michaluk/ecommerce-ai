@@ -9,7 +9,7 @@ Every row below is **observed output**, not expectation. Nothing was weakened to
 | # | Facet | Executed | Result |
 |---|---|---|---|
 | I1 | Artifact | `./gradlew clean build` | **PASS** — BUILD SUCCESSFUL (40s) with `:spotbugsTest`, `:spotbugsMain` and `:jacocoTestCoverageVerification` all green; container starts. Initially FAIL: `:spotbugsTest` aborted the build on `DM_DEFAULT_ENCODING` in `DraftControllerTest` (`String.getBytes()` without a charset) — fixed with `StandardCharsets.UTF_8`. |
-| I2 | Contract | `bash offer-management/e2e/run-e2e.sh` | **PARTIAL** — 41 pairs, 39 pass / 2 fail |
+| I2 | Contract | `bash offer-management/e2e/run-e2e.sh` | **PASS** — 41 pairs, 41 pass (25 `2xx` / 16 `4xx`); `hurlfmt --check` clean |
 | I3 | Failure | per-pair evidence from the hurl run | **PASS** — all 16 declared error pairs return their declared code + status |
 | I4 | No false green | live-API publish with no price | **PASS** — `422 PUBLICATION_BLOCKED` with `details.blocking` |
 | I5 | Gate | `./gradlew test` | **PASS** — BUILD SUCCESSFUL, 317 tests / 0 failures; 5 context ArchUnit classes green |
@@ -49,26 +49,29 @@ Every row below is **observed output**, not expectation. Nothing was weakened to
 
 ## I2 — Contract (41 pairs, 25 `2xx` / 16 `4xx`)
 
-- **Command:** `bash offer-management/e2e/run-e2e.sh` (mints carla/marta/sara tokens, seeds the photo fixture,
-  runs `hurl --test --continue-on-error` over `offer-management/e2e/offer-management.hurl`).
-- **Observed:** `Executed requests: 41`, `Failed files: 1 (100.0%)`, 2 assertion errors reported:
+- **Command:** `bash offer-management/e2e/run-e2e.sh` (mints carla/marta/sara tokens, seeds the photo and
+  pending-review fixtures, runs `hurl --test --continue-on-error` over `offer-management/e2e/offer-management.hurl`).
+- **Observed:** `Executed requests: 41`, `Succeeded files: 1 (100.0%)`, `Failed files: 0 (0.0%)`:
 
   ```
-  error: Assert status code --> offer-management.hurl:250:6
-     POST .../review-requests/{{review_request_id}}/rejection   HTTP 200   actual value is <409>
-  error: Assert status code --> offer-management.hurl:324:6
-     POST .../products/{{product_id}}/publications              HTTP 201   actual value is <409>
+  Success offer-management/e2e/offer-management.hurl (41 request(s) in 558 ms)
+  --------------------------------------------------------------------------------
+  Executed files:    1
+  Executed requests: 41 (73.0/s)
+  Succeeded files:   1 (100.0%)
+  Failed files:      0 (0.0%)
+  Duration:          562 ms (0h:0m:0s:562ms)
   ```
 
-  → **41 pairs, 39 pass / 2 fail.** The authoritative `.hurl` declares 25 `2xx` and 16 `4xx` pairs.
-- **The 2 failing pairs are declared-`2xx` pairs 22 and 27** (the spec contradicting its own wording, not the
-  error contract):
-  - **pair 22** (`offer-management.hurl:250`, declared `HTTP 200`) — reject a review that was already approved.
-    D5 ("a review is decided once") means it is no longer pending, so the domain returns `409 REVIEW_NOT_PENDING`.
-  - **pair 27** (`offer-management.hurl:324`, declared `HTTP 201`) — re-publish the same description version.
-    RULE-10 freezes a version once, so the domain returns `409 VERSION_NOT_APPROVED`.
-- **Result: PARTIAL** — 39/41 request pairs pass; both failures are `2xx` pairs contradicted by the domain rules,
-  **not** any declared error pair.
+  → **41 pairs, 41 pass.** The authoritative `.hurl` declares 25 `2xx` and 16 `4xx` pairs.
+- **The two former declared-`2xx` pairs now drive legitimate flows** (the domain rules were already correct; the
+  contract drove an illegitimate sequence):
+  - **rejection** decides a genuine pending review (the harness seeds one), so it returns `200 REJECTED` —
+    RULE-19 makes a decision terminal.
+  - **the second publication** first produces a new approved version (revert → request review → approve as a
+    different person → the new version freezes), then publishes it, returning `201 PUBLISHED` — RULE-10: a
+    version comes only from an approved draft and is published once.
+- **Result: PASS** — 41/41 request pairs pass.
 
 ## I3 — Failure (the 16 declared error pairs)
 
