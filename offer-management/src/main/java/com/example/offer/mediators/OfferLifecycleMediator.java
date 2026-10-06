@@ -18,6 +18,10 @@ import com.example.offer.offer.OfferService;
 import com.example.offer.offer.ProductSnapshot;
 import com.example.offer.pricing.PriceScheduleSnapshot;
 import com.example.offer.pricing.PricingService;
+import com.example.offer.publishing.IntegrationEvent.PhotoView;
+import com.example.offer.publishing.IntegrationEvent.ProductRemovedFromOffer;
+import com.example.offer.publishing.IntegrationEvent.ProductVersionPublishedToOffer;
+import com.example.offer.publishing.Outbox;
 import com.example.offer.tools.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -43,6 +47,7 @@ public class OfferLifecycleMediator {
     private final OfferService offers;
     private final CompletenessPolicy completeness;
     private final Decisions decisions;
+    private final Outbox outbox;
     private final Clock clock;
 
     public void createProduct(String productId, String version, Title title, Audit audit) {
@@ -140,6 +145,8 @@ public class OfferLifecycleMediator {
         require(decisions.publicationTiming(availableFrom, businessDate, createdOn));
 
         offers.publish(productId, publicationId, version, availableFrom, businessDate, missingCodes(frozen), audit);
+        outbox.append(new ProductVersionPublishedToOffer(productId, version.version(), availableFrom,
+                version.title(), version.description(), version.attributes(), photoViews(version, draft), audit));
     }
 
     public DraftSnapshot revert(String productId, String basedOnVersion, String newVersion,
@@ -161,6 +168,16 @@ public class OfferLifecycleMediator {
 
     public void removeFromOffer(String productId, Audit audit) {
         offers.removeFromOffer(productId, audit);
+        outbox.append(new ProductRemovedFromOffer(productId, audit));
+    }
+
+    private static List<PhotoView> photoViews(DescriptionVersion version, DraftSnapshot draft) {
+        Map<String, Photo> photos = new LinkedHashMap<>();
+        draft.photos().forEach(photo -> photos.put(photo.photoId(), photo));
+        return version.photoIds().stream()
+                .map(photos::get)
+                .map(photo -> new PhotoView(photo.photoId(), photo.mime(), photo.width(), photo.height()))
+                .toList();
     }
 
     private PriceScheduleSnapshot priceSchedule(String productId) {

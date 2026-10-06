@@ -19,7 +19,8 @@ class ArchitectureOfPublishingContextTest {
 
     static final DescribedPredicate<JavaClass> sharedKernelExposed = belongToAnyOf(
             Outbox.class, IntegrationEvent.class, IntegrationEvent.ProductPricesChanged.class,
-            IntegrationEvent.PriceView.class);
+            IntegrationEvent.PriceView.class, IntegrationEvent.ProductVersionPublishedToOffer.class,
+            IntegrationEvent.ProductRemovedFromOffer.class, IntegrationEvent.PhotoView.class);
 
     static final DescribedPredicate<JavaClass> sharedKernelUsed = belongToAnyOf(
             Identity.class, Audit.class);

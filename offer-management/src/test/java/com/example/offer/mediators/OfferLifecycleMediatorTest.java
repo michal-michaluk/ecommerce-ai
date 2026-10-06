@@ -1,6 +1,7 @@
 package com.example.offer.mediators;
 
 import com.example.offer.IntegrationTest;
+import com.example.offer.JsonAssert;
 import com.example.offer.auth.Audit;
 import com.example.offer.auth.Identity;
 import com.example.offer.draft.Description;
@@ -157,6 +158,42 @@ class OfferLifecycleMediatorTest {
                 .extracting(ProductSnapshot::draftState).isEqualTo(DraftState.IN_REVIEW);
     }
 
+    @Test
+    void publishAppendsTheVersionPublishedEventToTheOutboxInTheSameTransaction() {  // element 03
+        createEditedAndPricedProduct(activePrice());
+        reviewAndApprove(PRODUCT_ID);
+        DescriptionVersion frozen = mediator.freeze(PRODUCT_ID, reviewer());
+
+        mediator.publish(PRODUCT_ID, "pub-1", frozen, null, BUSINESS_DATE, reviewer());
+
+        assertThat(offers.get(PRODUCT_ID, BUSINESS_DATE)).get()
+                .extracting(ProductSnapshot::visibleVersion).isEqualTo("v1");
+        assertThat(outboxTypes()).containsExactly("ProductVersionPublishedToOffer_v1");
+        JsonAssert.assertThat(outboxPayload("ProductVersionPublishedToOffer_v1")).isExactlyLike("""
+                {"@type":"ProductVersionPublishedToOffer_v1","productId":"p-story","version":"v1",
+                 "availableFrom":null,"title":"Kosiarka r\u0119czna 340",
+                 "description":"Solidna kosiarka r\u0119czna do trawy i chwast\u00f3w.",
+                 "attributes":{},
+                 "photos":[{"photoId":"ph-1","mime":"image/jpeg","width":1200,"height":1200}],
+                 "audit":{"who":{"subject":"m.nowak"},"at":"2019-06-19T10:00:00Z"}}
+                """);
+    }
+
+    @Test
+    void removeFromOfferAppendsTheRemovedEventToTheOutboxInTheSameTransaction() {   // element 03
+        mediator.createProduct(PRODUCT_ID, "v1", new Title("Kosiarka r\u0119czna 340"), manager());
+
+        mediator.removeFromOffer(PRODUCT_ID, manager());
+
+        assertThat(offers.get(PRODUCT_ID, BUSINESS_DATE)).get()
+                .extracting(ProductSnapshot::offerPresence).isEqualTo(OfferPresence.REMOVED);
+        assertThat(outboxTypes()).containsExactly("ProductRemovedFromOffer_v1");
+        JsonAssert.assertThat(outboxPayload("ProductRemovedFromOffer_v1")).isExactlyLike("""
+                {"@type":"ProductRemovedFromOffer_v1","productId":"p-story",
+                 "audit":{"who":{"subject":"a.kowalska"},"at":"2019-06-19T09:00:00Z"}}
+                """);
+    }
+
     private void createEditedAndPricedProduct(DateRange validity) {
         mediator.createProduct(PRODUCT_ID, "v1", new Title("Kosiarka ręczna 340"), manager());
         mediator.editDraft(PRODUCT_ID, UpdateDraft.builder()
@@ -172,6 +209,16 @@ class OfferLifecycleMediatorTest {
 
     private int rows(String table) {
         return jdbc.queryForObject("select count(*) from " + table + " where product_id = ?", Integer.class, PRODUCT_ID);
+    }
+
+    private List<String> outboxTypes() {
+        return jdbc.queryForList("select event_type from outbox where partition_key = ? order by id",
+                String.class, PRODUCT_ID);
+    }
+
+    private String outboxPayload(String eventType) {
+        return jdbc.queryForObject("select payload::text from outbox where partition_key = ? and event_type = ?",
+                String.class, PRODUCT_ID, eventType);
     }
 
     private static DateRange activePrice() {
