@@ -65,9 +65,17 @@ class ProductReadsControllerTest {
         mvc.perform(get("/products/{productId}", productId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.productId").value(productId))
+                .andExpect(jsonPath("$.title").value("Kosiarka ręczna 340"))
                 .andExpect(jsonPath("$.state").value("PUBLISHED"))
                 .andExpect(jsonPath("$.category").value(CatalogFixture.CATEGORY))
-                .andExpect(jsonPath("$.visibleVersion").value("v1"))
+                .andExpect(jsonPath("$.descriptionVersion").value("v1"))
+                .andExpect(jsonPath("$.publishedVersion").value("v1"))
+                .andExpect(jsonPath("$.availableFrom").value(LocalDate.now().minusDays(1).toString()))
+                .andExpect(jsonPath("$.activePrice.value").value("259.00"))
+                .andExpect(jsonPath("$.activePrice.currency").value("PLN"))
+                .andExpect(jsonPath("$.activeDiscountPercent").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.photoCount").value(1))
+                .andExpect(jsonPath("$.createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.updatedBy").value("a.kowalska"));
     }
 
@@ -87,6 +95,15 @@ class ProductReadsControllerTest {
         String fragment = productId.substring(0, 12);
 
         mvc.perform(get("/products").param("query", fragment).param("size", "100"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[?(@.productId == '" + productId + "')]", hasSize(1)));
+    }
+
+    @Test
+    void queryFilterMatchesTheTitle() throws Exception {
+        String productId = seedPublished(id());
+
+        mvc.perform(get("/products").param("query", "kosiarka").param("size", "100"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.productId == '" + productId + "')]", hasSize(1)));
     }
@@ -140,6 +157,7 @@ class ProductReadsControllerTest {
 
     private String seedPublished(String productId) {
         publishDraft(draft(productId, DraftState.EDITING, null));
+        publisher.publishEvent(CatalogFixture.activePrice(productId));
         publisher.publishEvent(product(productId, OfferPresence.PRESENT,
                 List.of(publication(productId, "v1", LocalDate.now().minusDays(1)))));
         return productId;

@@ -61,8 +61,9 @@ class ProductReadsTest {
 
         ProductRead read = read(productId);
         assertThat(read.state()).isEqualTo(OfferState.PUBLISHED);
-        assertThat(read.visibleVersion()).isEqualTo("v1");
-        assertThat(read.scheduledVersion()).isNull();
+        assertThat(read.publishedVersion()).isEqualTo("v1");
+        assertThat(read.availableFrom()).isEqualTo(LocalDate.now().minusDays(1));
+        assertThat(read.descriptionVersion()).isEqualTo("v1");
     }
 
     @Test
@@ -75,8 +76,8 @@ class ProductReadsTest {
 
         ProductRead read = read(productId);
         assertThat(read.state()).isEqualTo(OfferState.SCHEDULED);
-        assertThat(read.scheduledVersion()).isEqualTo("v2");
-        assertThat(read.visibleVersion()).isNull();
+        assertThat(read.publishedVersion()).isNull();
+        assertThat(read.availableFrom()).isNull();
     }
 
     @Test
@@ -121,8 +122,7 @@ class ProductReadsTest {
 
         ProductRead read = read(productId);
         assertThat(read.state()).isEqualTo(OfferState.REMOVED);
-        assertThat(read.visibleVersion()).isNull();
-        assertThat(read.scheduledVersion()).isNull();
+        assertThat(read.publishedVersion()).isNull();
     }
 
     @Test

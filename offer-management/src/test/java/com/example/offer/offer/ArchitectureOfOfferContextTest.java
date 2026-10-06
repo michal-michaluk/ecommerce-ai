@@ -23,7 +23,7 @@ class ArchitectureOfOfferContextTest {
 
     static final DescribedPredicate<JavaClass> sharedKernelExposed = belongToAnyOf(
             DescriptionVersion.class, Publication.class, PublicationState.class,
-            OfferPresence.class, OfferState.class, VisibleVersion.class,
+            OfferPresence.class, OfferState.class, VisibleVersion.class, ScheduledVersion.class,
             ProductSnapshot.class, DraftState.class, DomainEvent.class,
             Completeness.class, Completeness.MissingRequirement.class,
             CompletenessPolicy.class, Decisions.class, Decisions.Decision.class,

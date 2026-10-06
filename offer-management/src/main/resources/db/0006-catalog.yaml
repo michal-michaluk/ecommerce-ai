@@ -56,6 +56,38 @@ databaseChangeLog:
                     nullable: false
 
   - changeSet:
+      id: 0006-catalog-product-reads-shape
+      author: michal.michaluk
+      changes:
+        - addColumn:
+            tableName: product_reads
+            columns:
+              - column:
+                  name: title
+                  type: varchar(255)
+              - column:
+                  name: description_version
+                  type: varchar(32)
+              - column:
+                  name: available_from
+                  type: date
+              - column:
+                  name: active_price
+                  type: jsonb
+              - column:
+                  name: active_discount_percent
+                  type: varchar(32)
+              - column:
+                  name: photo_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: prices
+                  type: jsonb
+
+  - changeSet:
       id: 0006-catalog-product-reads-state-index
       author: michal.michaluk
       changes:

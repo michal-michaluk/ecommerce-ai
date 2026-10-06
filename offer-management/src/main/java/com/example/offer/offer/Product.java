@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -93,32 +92,17 @@ class Product {
     }
 
     Optional<Publication> scheduledVersionAt(LocalDate businessDate) {
-        if (offerPresence == OfferPresence.REMOVED) {
-            return Optional.empty();
-        }
-        return publications.stream()
-                .filter(publication -> publication.stateAt(businessDate) == PublicationState.SCHEDULED)
-                .min(Comparator.comparing(Publication::availableFrom));
+        return ScheduledVersion.at(offerPresence, publications, businessDate).version();
     }
 
-    /** Element 04 §10 — derived, never stored; the missing requirements are handed in (RULE-34, RULE-70). */
+    /** Element 04 §10 — derived, never stored; the precedence lives in {@link OfferState#derive} (RULE-34, RULE-70). */
     OfferState offerState(LocalDate businessDate, List<String> missingRequirements) {
-        if (offerPresence == OfferPresence.REMOVED) {
-            return OfferState.REMOVED;
-        }
-        if (visibleVersionAt(businessDate).isPresent()) {
-            return OfferState.PUBLISHED;
-        }
-        if (scheduledVersionAt(businessDate).isPresent()) {
-            return OfferState.SCHEDULED;
-        }
-        if (draftState == DraftState.IN_REVIEW) {
-            return OfferState.PENDING_REVIEW;
-        }
-        if (draftState == DraftState.APPROVED && !missingRequirements.isEmpty()) {
-            return OfferState.BLOCKED;
-        }
-        return OfferState.DRAFT;
+        return OfferState.derive(offerPresence,
+                visibleVersionAt(businessDate).isPresent(),
+                scheduledVersionAt(businessDate).isPresent(),
+                draftState == DraftState.IN_REVIEW,
+                draftState == DraftState.APPROVED,
+                missingRequirements.isEmpty());
     }
 
     ProductSnapshot toSnapshot(LocalDate businessDate) {
