@@ -10,6 +10,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 
 import java.time.Clock;
+import java.time.ZoneId;
 
 @Configuration
 @EnableScheduling
@@ -17,9 +18,12 @@ import java.time.Clock;
 @EnableJpaRepositories(considerNestedRepositories = true)
 class AppConfiguration {
 
+    /** The single business zone: the source of both the business date and {@code Audit.at} (RULE-69). */
+    static final ZoneId BUSINESS_ZONE = ZoneId.of("Europe/Warsaw");
+
     @Bean
     Clock clock() {
-        return Clock.systemUTC();
+        return Clock.system(BUSINESS_ZONE);
     }
 
     @Bean
