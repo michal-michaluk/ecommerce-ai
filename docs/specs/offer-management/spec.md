@@ -234,6 +234,8 @@ Cannot execute yet — no application code exists (§6). Rows are **moved**, nev
 
 > Status: **proposed** (planning session). The implementation DoD (`I1–I7`, §11) has landed and
 > is the acceptance contract below; the specification increment gate (`check-spec.sh`) is green.
+> Operator decisions folded in: **A14** k3s on podman, **A15** PostgreSQL document-with-history,
+> **A16** in-cluster Postgres.
 
 ### Available Infrastructure
 
@@ -244,15 +246,18 @@ Cannot execute yet — no application code exists (§6). Rows are **moved**, nev
 | Static | SpotBugs 4.9.8 + findsecbugs · PIT 1.25.4 · JaCoCo 0.8.15 (`guardrail_mode=strict` → coverage 0.8, SpotBugs fail-on-finding) |
 | Security scan | Trivy (`trivyScan`, `trivyScanImage`) |
 | e2e | hurl (blueprint `e2e/`, pattern `example/e2e/devices.hurl`) |
-| Image | jib (`jibDockerBuild`) |
+| Runtime | **podman 6.1.0** only — no docker daemon (`docker` on PATH is a podman shim); k3d is out |
+| Image | `jibBuildTar` (OCI tar) + `podman load`, then imported into k3s containerd (`podman save | podman exec <k3s> ctr -n k8s.io images import -`) — `jibDockerBuild` cannot run |
+| Persistence | PostgreSQL + **document-with-history** (JSONB snapshot + events table) — blueprint `adapter-persistence-document.md` |
+| Deploy | **k3s in a privileged podman container** (no k3d, no docker): `podman run -d --privileged --name offer-management-k3s --cgroupns=host -p 6443:6443 -p 8080:80 rancher/k3s:v1.35.5-k3s1 server`; kubeconfig from `/etc/rancher/k3s/k3s.yaml`. The blueprint ships **no** k3s deploy script/overlay (`k8s/overlays/{dev,k3d}` only) — `deploy-k3s` authors it and renames the in-cluster overlay to `k8s/overlays/k3s` |
 | Spec gate | `docs/specs/offer-management/check-spec.sh` (12 rows, green) |
 | Verification skills | `review` (+ complexity / tests / arch / security / spec-coverage), `demo`, `contract-testing`, `sqt` |
 | Architecture docs | `docs/arch/microservice-java-spring/` — `index.md` is the mandatory workflow |
 
 Project directory `offer-management/` (A1); package root `com.example.offer`.
-G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTestReport spotbugsMain trivyScan pitest jibDockerBuild`.
+G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTestReport spotbugsMain trivyScan pitest jibBuildTar` (trivy/jib adapted to podman in `podman-toolchain`).
 
-### Clarification Decisions (assumptions — operator answered `propose plan`)
+### Clarification Decisions (A1–A13 assumptions; A14–A17 operator decisions)
 
 | # | Question | Assumption taken |
 |---|---|---|
@@ -269,18 +274,22 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 | A11 | Transport (Q38) | transactional outbox + relay to **Kafka** (blueprint ships `spring-kafka`), partition key `productId`, `_v1` types — Q38's bare poller cannot guarantee the per-`productId` ordering E03 requires |
 | A12 | Pact | **no Pact** — the `browsing offer` boundary is Kafka events, not HTTP, and there is no frontend app; event payload proven by a stub-consumer test + hurl for the admin surface |
 | A13 | Spring Boot version | template pins Spring Boot **4.1.0** while R6/§6 say 4.0.6; the generated template governs (blueprint adopted as-is) |
+| A14 | Deployment target (operator) | **k3s in a privileged podman container, no k3d, no docker** — `podman run -d --privileged --name offer-management-k3s --cgroupns=host -p 6443:6443 -p 8080:80 rancher/k3s:v1.35.5-k3s1 server`; kubeconfig at `/etc/rancher/k3s/k3s.yaml`. Entire solution stays on `microservice-java-spring`; the deploy script is authored by us because the blueprint has none |
+| A15 | Persistence style (operator) | **PostgreSQL + document-with-history** for every aggregate repository (JSONB snapshot + separate events table, `@Version` optimistic lock, events published after save) per `adapter-persistence-document.md`; read models via `adapter-projection.md` |
+| A16 | Postgres in-cluster | no Postgres manifest ships — deploy **bitnami/postgresql via Helm** with the service name the overlay expects |
+| A17 | Container runtime everywhere | every container operation is **podman**: trivy (`podman run`), image build (`jibBuildTar` + `podman load`), cluster (`podman run`) |
 
 ### Plan
 
 1. Scaffold and shared foundations
- - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a) , error-contract (E02 "Error codes") , hurl-fixtures (E02 F1)
+ - scaffold-service (A1, A3, A13) -> shared-kernel (E04 §1/§11a) , error-contract (E02 "Error codes") , podman-toolchain (A17) , hurl-fixtures (E02 F1)
 2. Draft context
- - draft-domain (E04 §4/§6/§7, E07 D3/D5) -> draft-persistence (blueprint `adapter-persistence-event-sourcing.md`)
+ - draft-domain (E04 §4/§6/§7, E07 D3/D5) -> draft-persistence (A15, `adapter-persistence-document.md`)
 3. Pricing context
- - pricing-domain (E04 §8, E06, E08) -> pricing-persistence
+ - pricing-domain (E04 §8, E06, E08) -> pricing-persistence (A15)
 4. Offer context and decisions
  - decisions-policy (E05, E07) , offer-domain (E04 §2/§3/§5/§9/§9a/§10, RULE-70)
- - offer-domain -> product-mediator (E04 RULE-30/50/51, `adapter-mediator.md`)
+ - offer-domain -> offer-persistence (A15) , offer-domain -> product-mediator (E04 RULE-30/50/51, `adapter-mediator.md`)
 5. Read models
  - catalog-projection (E02 states/`completeness`, E04 §9a/§10, `adapter-projection.md`) -> catalog-http
 6. HTTP API
@@ -288,7 +297,8 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 7. Publishing to browsing offer
  - outbox-relay (E03, A11) -> pricing-lifecycle-scheduler (E08 T2, A10)
 8. Security and contracts
- - security-roles (E02 "Auth", `security.md`) , hurl-contract-e2e (E02) , integration-e2e (E03 delivery semantics, I6)
+ - security-roles (E02 "Auth", `security.md`)
+ - security-roles -> deploy-k3s (A14, A16, A17) -> hurl-contract-e2e (E02, I2/I3) , integration-e2e (E03, I6)
 9. Prove of done
  - prove-dod (I1–I7)
 10. Evidence
@@ -302,10 +312,11 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **Goal:** generate the `offer-management` Gradle project from the blueprint and commit the baseline.
 - **Executor:** general
 - **Docs:** `docs/arch/microservice-java-spring/index.md`, `adding-a-bounded-context.md`, `code-structure.md`; §6; A1/A3/A13
-- **IN / OUT:** IN: blueprint `microservice-java-spring`; OUT: `offer-management/**`, baseline commit on `feat/offer-management` containing `docs/`, `.agents/`, `.storybook/`, `prototypes/`, `.gitignore`
+- **IN / OUT:** IN: blueprint `microservice-java-spring`; OUT: `offer-management/**` (incl. `k8s/base`, `k8s/infra`, `k8s/overlays/k3d` — renamed to `k3s` by `deploy-k3s`), baseline commit on `feat/offer-management` containing `docs/`, `.agents/`, `.storybook/`, `prototypes/`, `.gitignore`
 - **checks:**
   - `cd offer-management; ./gradlew build -x test --no-daemon`
   - `test -f offer-management/src/main/java/com/example/offer/AppRunner.java`
+  - `test -f offer-management/k8s/overlays/k3d/kustomization.yaml`
   - `git diff --exit-code`
 - **review_prompt:** Check the generated project against `docs/arch/microservice-java-spring/index.md` and the scaffold template: strict guardrail mode, Java 25 toolchain, all six quality-gate task groups wired, no context package outside the blueprint layout. Report deviations. Do not edit files — report only.
 
@@ -318,6 +329,17 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
   - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*Architecture*' --no-daemon`
 - **review_prompt:** Check `Identity`/`Audit` against E04 §1/§11a (actor resolved in the adapter only; no token in the domain; `Audit(who, at)` on every state-modifying operation) and that `ArchitectureDescription` exposure lists were updated for the new shared-kernel types. Report deviations. Do not edit files — report only.
+
+#### podman-toolchain
+- **Goal:** make the generated build work on podman-only hosts, no docker (A17).
+- **Executor:** general
+- **Docs:** blueprint `template/build.gradle`, `docs/arch/microservice-java-spring/tech-update.md`; A17
+- **IN / OUT:** IN: `scaffold-service`; OUT: `offer-management/build.gradle` (image task `jibBuildTar`, `trivyScan`/`trivyScanImage` → `podman run`, gate task renamed), `offer-management/AGENTS.md` note
+- **checks:**
+  - `cd offer-management; ./gradlew build -x test --no-daemon`
+  - `cd offer-management; ./gradlew jibBuildTar --no-daemon`
+  - `grep -q podman offer-management/build.gradle`
+- **review_prompt:** Check no remaining `docker` invocation in `build.gradle`, the OCI tar is produced by `jibBuildTar`, trivy runs via `podman run`, and the guardrail-mode coverage/SpotBugs settings are unweakened. Report deviations. Do not edit files — report only.
 
 #### error-contract
 - **Goal:** one exception hierarchy + advice mapping every E02 error code to its status and body (`code`, `message`, `details.fields[]`, `details.blocking[]`).
@@ -350,13 +372,13 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **review_prompt:** Check the `draft` context against E04 §4/§6/§7: package-private aggregate with no getters, every invariant a named method, one event per state change carrying `Audit`, idempotent no-ops emit nothing (RULE-61), D3 (review with missing items allowed) and D5 (reviewer ≠ author) enforced inside the aggregate, photo policy per Q21. Report deviations. Do not edit files — report only.
 
 #### draft-persistence
-- **Goal:** event-sourcing persistence for `DescriptionDraft` + Liquibase changeset.
+- **Goal:** PostgreSQL document-with-history persistence for `DescriptionDraft` + Liquibase changeset (A15).
 - **Executor:** general
-- **Docs:** `adapter-persistence-event-sourcing.md`; E04 RULE-1..8
-- **IN / OUT:** IN: `draft-domain`; OUT: `draft/DraftEventSourcingRepository.java`, `src/main/resources/db/0002-draft.yaml`, `db.changelog.yaml`; `draft/DraftRepositoryTest.java`
+- **Docs:** `adapter-persistence-document.md` (document with history, `@Primary`); E04 RULE-1..8
+- **IN / OUT:** IN: `draft-domain`; OUT: `draft/DraftDocumentWithHistoryRepository.java` (`@Primary`), `src/main/resources/db/0002-draft.yaml` (`draft_document` + `draft_events`), `db.changelog.yaml`; `draft/DraftRepositoryTest.java`
 - **checks:**
   - `cd offer-management; ./gradlew test --tests '*DraftRepositoryTest' --no-daemon`
-- **review_prompt:** Check save/load/replay against the event-sourcing adapter rules: events persisted in emission order, rebuilt snapshot equals the original, JSONB round-trip stable, no JPA entity in the port signature. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check against `adapter-persistence-document.md`: JSONB snapshot with `@Version` optimistic locking, events appended in emission order in the same transaction, aggregate snapshot rebuilt from the document, no JPA entity leaks outside the repository file, `@Primary` is the history variant. Report deviations. Do not edit files — report only.
 
 #### pricing-domain
 - **Goal:** the `pricing` context — `PriceSchedule` aggregate, value objects, effective-price calculation, lifecycle state.
@@ -370,13 +392,13 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
 - **review_prompt:** Check against E06's 8-row and E08's 6-row scenario tables row by row, plus RULE-25 (no overlap → `PRICE_OVERLAP`), RULE-26 (editability), RULE-38 (`validFrom` inclusive / `validTo` exclusive), RULE-45..47 (currency carry, one rounding, `percent` in (0,100)). Report every uncovered row. Do not edit files — report only.
 
 #### pricing-persistence
-- **Goal:** event-sourcing persistence for `PriceSchedule` + Liquibase changeset.
+- **Goal:** PostgreSQL document-with-history persistence for `PriceSchedule` + Liquibase changeset (A15).
 - **Executor:** general
-- **Docs:** `adapter-persistence-event-sourcing.md`; E04 §8
-- **IN / OUT:** IN: `pricing-domain`; OUT: `pricing/PriceScheduleEventSourcingRepository.java`, `src/main/resources/db/0003-pricing.yaml`, `db.changelog.yaml`; `PriceScheduleRepositoryTest.java`
+- **Docs:** `adapter-persistence-document.md`; E04 §8
+- **IN / OUT:** IN: `pricing-domain`; OUT: `pricing/PriceScheduleDocumentWithHistoryRepository.java` (`@Primary`), `src/main/resources/db/0003-pricing.yaml` (`price_schedule_document` + `price_schedule_events`), `db.changelog.yaml`; `PriceScheduleRepositoryTest.java`
 - **checks:**
   - `cd offer-management; ./gradlew test --tests '*PriceScheduleRepositoryTest' --no-daemon`
-- **review_prompt:** Check save/load/replay and that reconstructed entries preserve ids, amounts, percents and ranges. Report deviations. Do not edit files — report only.
+- **review_prompt:** Check the JSONB snapshot round-trip preserves ids, amounts, percents and ranges; events persisted in the same transaction; optimistic locking via `@Version`; no JPA entity in the port signature. Report deviations. Do not edit files — report only.
 
 #### offer-domain
 - **Goal:** the `offer` context — `DescriptionVersion`, `Publication`, `OfferPresence`, derived `VisibleVersion`/`OfferState`, and the `Product` process aggregate.
@@ -388,6 +410,15 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
   - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.*' --no-daemon`
   - `cd offer-management; ./gradlew test --tests '*ArchitectureOfOfferContextTest' --no-daemon`
 - **review_prompt:** Check `VisibleVersion` and `OfferState` against E04 §9a/§10 incl. RULE-40 (removal hides all versions), the total precedence RULE-35 and the tightened `BLOCKED` (RULE-70: approved-but-blocked only); version immutability, `basedOnVersion` lineage, append-only publications. Report deviations. Do not edit files — report only.
+
+#### offer-persistence
+- **Goal:** PostgreSQL document-with-history persistence for `Product`, `DescriptionVersion` and `Publication` + Liquibase changeset (A15).
+- **Executor:** general
+- **Docs:** `adapter-persistence-document.md`; E04 §3/§5/§9 (RULE-3, RULE-9, RULE-29, RULE-33)
+- **IN / OUT:** IN: `offer-domain`; OUT: `offer/ProductDocumentWithHistoryRepository.java`, `offer/PublicationDocumentWithHistoryRepository.java` (both `@Primary`), `src/main/resources/db/0004-offer.yaml`, `db.changelog.yaml`; repository tests
+- **checks:**
+  - `cd offer-management; ./gradlew test --tests 'com.example.offer.offer.*RepositoryTest' --no-daemon`
+- **review_prompt:** Check JSONB snapshot load/save, events appended in the same transaction, `@Version` optimistic locking, versions/publications append-only (no update path), and that a removed product still loads with its versions and publications intact (RULE-3). Report deviations. Do not edit files — report only.
 
 #### decisions-policy
 - **Goal:** `Completeness` (E05) + the five decisions D1–D5 (E07) as policy records, with the data-driven requirement catalogue and the null-object advisory text-check port.
@@ -488,24 +519,38 @@ G0–G6 = `./gradlew build -x test` → `./gradlew test` → `./gradlew jacocoTe
   - `cd offer-management; ./gradlew build -x test spotbugsMain --no-daemon`
 - **review_prompt:** Check every E02 endpoint has an explicit security decision, deny-by-default holds, `sales` cannot reach content endpoints and vice versa, 401 without token and 403 with the wrong role, no issuer URI hardcoded. Report endpoints lacking a decision. Do not edit files — report only.
 
+#### deploy-k3s
+- **Goal:** deploy the service and its infra to local **k3s in a privileged podman container** (A14/A16/A17): Postgres, Kafka, Keycloak, OTel, app image, traefik ingress.
+- **Executor:** general
+- **Docs:** `k8s/base/*`, `k8s/infra/*` (kafka, keycloak, otel), `k8s/overlays/k3d/*` → renamed `k8s/overlays/k3s` (blueprint `microservice-java-spring` only); A14/A16/A17
+- **IN / OUT:** IN: `podman-toolchain`, `security-roles`; OUT: `offer-management/scripts/deploy-k3s.sh` (k3s container boot + kubeconfig extract + bitnami Postgres + Keycloak + image import + `kubectl apply -k k8s/overlays/k3s`), `offer-management/k8s/overlays/k3s/` (from the blueprint's `k3d` overlay, renamed), a run/deploy skill under `.agents/skills/run-offer-management/`
+- **checks:**
+  - `bash offer-management/scripts/deploy-k3s.sh deploy`
+  - `KUBECONFIG=offer-management/.k3s-kubeconfig kubectl get nodes --no-headers | grep -q ' Ready '`
+  - `KUBECONFIG=offer-management/.k3s-kubeconfig kubectl -n offer-management wait --for=condition=available deploy/offer-management --timeout=240s`
+  - `curl -fsS http://localhost:8080/actuator/health/readiness`
+- **review_prompt:** Check no docker/k3d usage anywhere in the script, the k3s container is privileged with `--cgroupns=host`, kubeconfig host is rewritten from `127.0.0.1` to `localhost`, the app image is imported into k3s containerd (not via a registry), Postgres/Keycloak/Kafka come up, and the pod keeps the blueprint's non-root securityContext and probes. Report deviations. Do not edit files — report only.
+
 #### hurl-contract-e2e
 - **Goal:** run the E02 contract against the live service (I2, I3).
 - **Executor:** general
 - **Docs:** E02 (`prototypes/frontend-api.hurl`, `frontend-api.responses.md`); A5/A6/A7
-- **IN / OUT:** IN: `hurl-fixtures`, `security-roles`; OUT: `offer-management/e2e/offer-management.hurl` (22 endpoints / 41 pairs), updated `prototypes/frontend-api.hurl` where A5/A6/A7 changed it
+- **IN / OUT:** IN: `hurl-fixtures`, `deploy-k3s`; OUT: `offer-management/e2e/offer-management.hurl` (22 endpoints / 41 pairs), updated `prototypes/frontend-api.hurl` where A5/A6/A7 changed it
 - **checks:**
-  - `hurl --test --variable BASE_URL=http://localhost:8080 --variable KEYCLOAK_URL=http://localhost:8080 offer-management/e2e/offer-management.hurl`
+  - `bash offer-management/scripts/deploy-k3s.sh run`
+  - `hurl --test --variable BASE_URL=http://localhost:8080 --variable KEYCLOAK_URL=http://localhost:18081 offer-management/e2e/offer-management.hurl`
   - `hurlfmt --check docs/specs/offer-management/prototypes/frontend-api.hurl`
 - **review_prompt:** Check the hurl suite covers every E02 endpoint in both success and error form, response shapes match `frontend-api.responses.md`, and assertions are subsets where generated ids/timestamps appear. Report missing or over-strict cases. Do not edit files — report only.
 
 #### integration-e2e
-- **Goal:** prove the whole lifecycle end to end (PostgreSQL + Keycloak + Kafka) and the event delivery semantics (I6).
+- **Goal:** prove the whole lifecycle end to end on the running k3s cluster (I6): a published event reaches a deployed `browsing offer` consumer and its read model updates.
 - **Executor:** general
-- **Docs:** E02, E03 delivery-semantics table, E04 §2 domain story
-- **IN / OUT:** IN: all prior nodes; OUT: `src/test/.../OfferLifecycleIntegrationTest.java`, `src/test/.../BrowsingOfferConsumerStubTest.java`
+- **Docs:** E02, E03 delivery-semantics table, E04 §2 domain story; A14
+- **IN / OUT:** IN: `deploy-k3s`, all prior nodes; OUT: `offer-management/k8s/infra/browsing-offer-consumer.yaml` (local consumer deploying a read model), `offer-management/e2e/lifecycle-integration.md` (row → command → observed); Testcontainers unit-level flow stays in `src/test/.../OfferLifecycleIntegrationTest.java`
 - **checks:**
   - `cd offer-management; ./gradlew test --tests '*IntegrationTest' --no-daemon`
-- **review_prompt:** Check the integration test walks every row of the E04 §2 domain story and asserts the E03 delivery semantics (at-least-once, per-product ordering, out-of-order price ignored, replay). Report uncovered steps. Do not edit files — report only.
+  - `KUBECONFIG=offer-management/.k3s-kubeconfig kubectl -n offer-management get pods --no-headers | grep -v -E 'Running|Completed' ; test $? -eq 1`
+- **review_prompt:** Check every row of the E04 §2 domain story is walked and the E03 delivery semantics (at-least-once, per-`productId` ordering, out-of-order price ignored, replay) are asserted against the Kafka consumer on the cluster, not a stub. Report uncovered steps. Do not edit files — report only.
 
 #### prove-dod
 - **Goal:** execute every row of §11 "Definition of Done — the implementation increment" (I1–I7) and report per row (row → command → observed → pass/fail).
@@ -543,6 +588,15 @@ None — element files are **not** edited by this proposal. Pending confirmation
 - E03: transport = outbox → Kafka (A11) — Q38's bare poller cannot deliver the declared ordering/replay.
 - spec §10: register items Q17, Q18, Q20–Q24, Q26–Q39 remain `proposed`; `proposed` is not `accepted`.
 
+### Blueprint Gaps (microservice-java-spring)
+
+Found while planning; each is absorbed by a node, not silently worked around:
+
+- **No k3s deploy script / no k3s overlay** — only `k8s/overlays/{dev,k3d}` + `scripts/trace.sh`. -> `deploy-k3s` authors `scripts/deploy-k3s.sh` and renames the in-cluster overlay to `k8s/overlays/k3s` (A14).
+- **Docker-only image + scan tasks** — `jibDockerBuild` and `trivyScan`/`trivyScanImage` shell out to `docker`, which does not exist here. -> `podman-toolchain` switches to `jibBuildTar` + `podman load` and `podman run` for trivy (A17).
+- **No Postgres manifest** — the in-cluster overlay's `-db-postgresql` secret/service has no backing Deployment. -> bitnami Helm in `deploy-k3s` (A16).
+- **No e2e/deploy script** — `e2e/*.hurl` exists but nothing runs the stack. -> `deploy-k3s` + `hurl-contract-e2e` (I2/I3, I6).
+
 ### Issues & Resolutions
 
 | Node | Issue | Fix |
@@ -562,7 +616,7 @@ None — element files are **not** edited by this proposal. Pending confirmation
 ### Open Topics
 
 - Register items Q17, Q18, Q20–Q24, Q26–Q39 remain `proposed`.
-- `browsing offer` (ticket [#3](https://github.com/michal-michaluk/ecommerce-ai/issues/3)) is deferred — the consumer in `integration-e2e` is a local stub, not the real service.
+- `browsing offer` (ticket [#3](https://github.com/michal-michaluk/ecommerce-ai/issues/3)) is deferred — `integration-e2e` deploys a **local** consumer pod against the cluster's Kafka; the real service is #3's scope.
 - Spring Boot version drift: R6/§6 say 4.0.6, scaffold template pins 4.1.0 (A13).
 - I7's metric has no baseline yet — must be captured before the increment closes.
 
